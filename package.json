@@ -19,7 +19,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc -w"
+    "dev": "tsc -w",
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "store",
