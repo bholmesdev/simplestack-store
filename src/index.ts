@@ -35,24 +35,20 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
         });
     };
 
-    const base = { get, set, listen } as Store<S>;
-
-    if (!isStateObject(get())) {
-        return base;
-    }
+    const api = { get, set, listen } as Store<S>;
 
     function select<K extends keyof S>(key: K) {
         const getSelected = () => {
             const state = get();
             if (!isStateObject(state)) {
-                throw new Error(UNEXPECTED_SELECT_ERROR);
+                throw new Error(getUnexpectedSelectError(typeof state));
             }
             return state[key];
         };
         const setSelected = (setter: Setter<S>) => {
             set((state) => {
                 if (!isStateObject(state)) {
-                    throw new Error(UNEXPECTED_SELECT_ERROR);
+                    throw new Error(getUnexpectedSelectError(typeof state));
                 }
                 const prev = state[key];
                 const next = typeof setter === "function" ? setter(prev) : setter;
@@ -63,11 +59,17 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
         return createStoreApi(getSelected, setSelected);
     };
 
-    Object.assign(base, { select });
-    return base;
+    Object.assign(api, { select });
+    return api;
 };
 
-const UNEXPECTED_SELECT_ERROR = "Select unexpectedly called from a primitive state value.";
+function getUnexpectedSelectError(objType: string) {
+    let error = `\`.select()\` was unexpectedly called on a state value that wasn't an object. Received type: ${objType}.`;
+    if (objType === 'undefined') {
+        error += ` It's possible you tried to select a nested value on an object key or an array index. If so, try checking if the key is defined before calling \`.select()\`.`
+    }
+    return error;
+}
 
 function isStateObject(state: any): state is StateObject {
     return typeof state === "object" && state !== null;
