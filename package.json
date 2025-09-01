@@ -39,6 +39,11 @@
   "peerDependencies": {
     "react": "^17.0.0 || ^18.0.0 || ^19.0.0"
   },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
   "typesVersions": {
     "*": {
       "react": ["dist/react.d.ts"],
