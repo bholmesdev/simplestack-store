@@ -1,5 +1,5 @@
 {
-  "name": "@simplestack/store",
+  "name": "instore",
   "version": "0.0.1",
   "description": "A simple storage solution for React",
   "type": "module",
@@ -46,8 +46,12 @@
   },
   "typesVersions": {
     "*": {
-      "react": ["dist/react.d.ts"],
-      "*": ["dist/index.d.ts"]
+      "react": [
+        "dist/react.d.ts"
+      ],
+      "*": [
+        "dist/index.d.ts"
+      ]
     }
   },
   "files": [
