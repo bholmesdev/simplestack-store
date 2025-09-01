@@ -22,59 +22,25 @@ export function store<T extends StateObject | StatePrimitive>(initial: T): Store
     const state = new Signal.State<T>(initial);
     const get = () => state.get();
     const set = (setter: Setter<T>) => state.set(typeof setter === "function" ? setter(state.get()) : setter);
-    const listen = (callback: (state: T) => void) => {
+    return createStoreApi(get, set);
+}
+
+const createStoreApi = <S extends StateObject | StatePrimitive>(
+    get: () => S,
+    set: (setter: Setter<S>) => void,
+): Store<S> => {
+    const listen = (callback: (state: S) => void) => {
         return effect(() => {
-            callback(state.get());
+            callback(get());
         });
     };
 
-    const base = { get, set, listen } as Store<T>;
+    const base = { get, set, listen } as Store<S>;
 
     if (!isStateObject(get())) {
         return base;
     }
 
-    function select<K extends keyof T>(key: K) {
-        const getSelected = () => {
-            const selectedState = state.get();
-            if (!isStateObject(selectedState)) {
-                throw new Error(UNEXPECTED_SELECT_ERROR);
-            }
-            return selectedState[key];
-        };
-        const setSelected = (setter: Setter<any>) => {
-            set((parent: any) => {
-                const prevChild = parent?.[key];
-                const nextChild = typeof setter === "function" ? (setter as (s: any) => any)(prevChild) : setter;
-                if (Object.is(prevChild, nextChild)) return parent;
-                return { ...(parent as any), [key]: nextChild } as T;
-            });
-        };
-        return createSelectedStore(getSelected, setSelected);
-    };
-
-    Object.assign(base, { select });
-    return base;
-}
-
-const createSelectedStore = <S extends StateObject | StatePrimitive>(
-    get: () => S,
-    set: (setter: Setter<S>) => void,
-): Store<S> => {
-    const listenSelected = (callback: (state: S) => void) => {
-        // Initialize with a symbol INIT to call listen() on initial render
-        const INIT = Symbol("init");
-        let prev: S | typeof INIT = INIT;
-        return effect(() => {
-            const next = get();
-            if (prev === INIT || !Object.is(prev, next)) {
-                prev = next;
-                callback(next);
-            }
-        });
-    };
-
-    const base = { get, set, listen: listenSelected } as Store<S>;
     function select<K extends keyof S>(key: K) {
         const getSelected = () => {
             const state = get();
@@ -94,7 +60,7 @@ const createSelectedStore = <S extends StateObject | StatePrimitive>(
                 return { ...state as StateObject, [key]: next } as S;
             });
         };
-        return createSelectedStore(getSelected, setSelected);
+        return createStoreApi(getSelected, setSelected);
     };
 
     Object.assign(base, { select });
