@@ -50,43 +50,43 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
         });
     };
 
-    const api = { get, set, listen } as Store<S>;
+    if (isStatePrimitive(get())) {
+        return { get, set, listen, select: undefined as SelectFn<S> };
+    }
 
-    function select<K extends keyof S>(key: K) {
-        const getSelected = () => {
+    function select<K extends keyof S>(key: K): Store<SelectValue<S, K>> {
+        const getSelected = (): SelectValue<S, K> => {
             const state = get();
-            if (!isStateObject(state)) {
+            if (isStatePrimitive(state)) {
                 throw new Error(UNEXPECTED_SELECT_ERROR);
             }
             return state[key];
         };
-        const setSelected = (setter: Setter<S>) => {
+        const setSelected = (setter: Setter<SelectValue<S, K>>) => {
             set((state) => {
-                if (!isStateObject(state)) {
+                if (isStatePrimitive(state)) {
                     throw new Error(UNEXPECTED_SELECT_ERROR);
                 }
-                const prev = state[key];
-                const next = typeof setter === "function" ? setter(prev) : setter;
+                const stateObj: StateObject = state;
+                const prev = stateObj[key];
+                const next =
+                    typeof setter === "function"
+                        ? (setter as (s: SelectValue<S, K>) => SelectValue<S, K>)(prev)
+                        : setter;
                 if (Object.is(prev, next)) return state;
-                return { ...state as StateObject, [key]: next } as S;
+                return { ...stateObj, [key]: next } as S;
             });
         };
         return createStoreApi(getSelected, setSelected);
-    };
-
-    if (isStateObject(get())) {
-        Object.assign(api, { select });
-    } else {
-        Object.assign(api, { select: undefined });
     }
 
-    return api;
+    return { get, set, listen, select: select as SelectFn<S> };
 };
 
 const UNEXPECTED_SELECT_ERROR = "Internal: select() was unexpectedly called on a state value that wasn't an object.";
 
-function isStateObject(state: any): state is StateObject {
-    return typeof state === "object" && state !== null;
+function isStatePrimitive(state: any): state is StatePrimitive {
+    return typeof state === "string" || typeof state === "number" || typeof state === "boolean" || state === null || state === undefined;
 }
 
 let needsEnqueue = true;
@@ -128,3 +128,13 @@ export function effect(callback: (() => void) | (() => () => void)) {
         cleanup = undefined;
     };
 }
+
+type Note = {
+    title: string;
+}
+
+const noteStore = store({
+    notes: [] as Note[],
+})
+
+const firstNoteTitle = noteStore.select("notes").select(0).select?.('title');
