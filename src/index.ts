@@ -5,13 +5,28 @@ export type StatePrimitive = string | number | boolean | null | undefined;
 
 export type Setter<T extends StateObject | StatePrimitive> = T | ((state: T) => T);
 
+// For select key results: arrays and index-signature records should yield possibly undefined,
+// while known object keys should remain defined.
+export type SelectValue<S, K extends keyof S> =
+    // Arrays: any index access may be out of bounds
+    S extends readonly (infer U)[] ? U | undefined
+    // Index-signature records: broad key access may be missing
+    : string extends keyof S ? S[K] | undefined
+    : number extends keyof S ? S[K] | undefined
+    : S[K];
+
+// Make `select` always present but typed as undefined when the state may not be an object
+export type SelectFn<T extends StateObject | StatePrimitive> =
+    T extends StateObject
+    ? <K extends keyof T>(key: K) => Store<SelectValue<T, K>>
+    : undefined;
+
 export type Store<T extends StateObject | StatePrimitive> = {
     get: () => T;
     set: (setter: Setter<T>) => void;
     listen: (callback: (state: T) => void) => () => void;
-} & (T extends StateObject ? {
-    select: <K extends keyof T>(key: K) => Store<T[K]>;
-} : {});
+    select: SelectFn<T>;
+};
 
 // Overloads to widen primitive literals
 export function store(initial: number): Store<number>;
