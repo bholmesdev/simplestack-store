@@ -74,7 +74,19 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
         return createStoreApi(getSelected, setSelected);
     };
 
-    Object.assign(api, { select });
+    if (isStateObject(get())) {
+        Object.assign(api, { select });
+    } else {
+        // Hide select method to prevent accidental usage on primitive stores
+        // but still log useful error messages
+        Object.defineProperty(api, 'select', {
+            value: select,
+            enumerable: false,
+            writable: false,
+            configurable: false
+        });
+    }
+
     return api;
 };
 
