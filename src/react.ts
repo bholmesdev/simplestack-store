@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import type { Setter, StateObject, StatePrimitive, Store } from "./index.js";
+import type { StateObject, StatePrimitive, Store } from "./index.js";
 
-export function useStore<T extends StateObject | StatePrimitive>(store: Store<T>): [T, (setter: Setter<T>) => void] {
-    const [state, setState] = useState(store.get());
+export function useStoreValue<T extends StateObject | StatePrimitive>(store: Store<T>): T;
+export function useStoreValue<T extends StateObject | StatePrimitive>(store: Store<T> | undefined): T | undefined;
+export function useStoreValue<T extends StateObject | StatePrimitive>(store: undefined): undefined;
+export function useStoreValue<T extends StateObject | StatePrimitive>(store: Store<T> | undefined) {
+    const [state, setState] = useState<T | undefined>(store?.get());
     useEffect(() => {
-        return store.listen(setState);
+        return store?.listen(setState);
     }, [store]);
-    return [state, store.set];
+    return state;
 }
