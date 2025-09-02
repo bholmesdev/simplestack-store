@@ -56,14 +56,14 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
         const getSelected = () => {
             const state = get();
             if (!isStateObject(state)) {
-                throw new Error(getUnexpectedSelectError(typeof state));
+                throw new Error(UNEXPECTED_SELECT_ERROR);
             }
             return state[key];
         };
         const setSelected = (setter: Setter<S>) => {
             set((state) => {
                 if (!isStateObject(state)) {
-                    throw new Error(getUnexpectedSelectError(typeof state));
+                    throw new Error(UNEXPECTED_SELECT_ERROR);
                 }
                 const prev = state[key];
                 const next = typeof setter === "function" ? setter(prev) : setter;
@@ -77,26 +77,13 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
     if (isStateObject(get())) {
         Object.assign(api, { select });
     } else {
-        // Hide select method to prevent accidental usage on primitive stores
-        // but still log useful error messages
-        Object.defineProperty(api, 'select', {
-            value: select,
-            enumerable: false,
-            writable: false,
-            configurable: false
-        });
+        Object.assign(api, { select: undefined });
     }
 
     return api;
 };
 
-function getUnexpectedSelectError(objType: string) {
-    let error = `\`.select()\` was unexpectedly called on a state value that wasn't an object. Received type: ${objType}.`;
-    if (objType === 'undefined') {
-        error += ` It's possible you tried to select a nested value on an object key or an array index. If so, try checking if the key is defined before calling \`.select()\`.`
-    }
-    return error;
-}
+const UNEXPECTED_SELECT_ERROR = "Internal: select() was unexpectedly called on a state value that wasn't an object.";
 
 function isStateObject(state: any): state is StateObject {
     return typeof state === "object" && state !== null;
