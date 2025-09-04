@@ -2,8 +2,9 @@
 
 A simple, `select`-xcellent state management library with the power of Jotai and Zustand combined.
 
-```ts
+```tsx
 import { store } from "@simplestack/store";
+import { useStoreValue } from "@simplestack/store/react";
 
 // Define your store with an initial state
 const documentStore = store({
@@ -15,18 +16,27 @@ const documentStore = store({
   },
 });
 
-// Use getters and setters to update the store
-documentStore.set((doc) => ({ ...doc, title: "Welcome to simple store!" }));
-console.log(documentStore.get());
-// { title: "Welcome to simple store!", authors: ["Ada", "Ben"], meta: { pages: 3, tags: ["draft", "internal"] } }
-
-// Select parts of a store to listen and update individually
+// Select parts of a store to listen to individually
 const titleStore = documentStore.select("title");
 const tagsStore = documentStore.select("meta").select("tags");
 
-titleStore.set("You're going to love selectors");
-console.log(titleStore.get()); // "You're going to love selectors"
-console.log(documentStore.get().title); // "You're going to love selectors"
+function Document() {
+  // Update your UI with the store's current state
+  const { title, tags } = useStoreValue(documentStore);
+  return (
+    <div>
+      {title} {tags.join(", ")}
+    </div>
+  );
+}
+
+function Title() {
+  // And scope updates with selected stores for fine-grained control
+  const title = useStoreValue(titleStore);
+  return (
+    <input value={title} onChange={(e) => titleStore.set(e.target.value)} />
+  );
+}
 ```
 
 ## API
