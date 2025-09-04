@@ -3,6 +3,11 @@ import { Signal } from "signal-polyfill";
 export type StateObject = Record<string | number | symbol, any>;
 export type StatePrimitive = string | number | boolean | null | undefined;
 
+/**
+ * Setter for the store.
+ * Can be either a value or a function that receives the current state and returns the new state.
+ * @see {@link Store}
+ */
 export type Setter<T extends StateObject | StatePrimitive> =
 	| T
 	| ((state: T) => T);
@@ -25,12 +30,83 @@ export type SelectFn<T extends StateObject | StatePrimitive> =
 		: undefined;
 
 export type Store<T extends StateObject | StatePrimitive> = {
+	/**
+	 * Get the current state of the store.
+	 * @example
+	 * const state = store(0).get();
+	 * console.log(state); // 0
+	 */
 	get: () => T;
+	/**
+	 * Set the state of the store.
+	 * Can pass either a value or a function that receives the current state and returns the new state.
+	 *
+	 * @example
+	 * const countStore = store(0);
+	 * const increment = () => countStore.set((count) => count + 1);
+	 * const setToZero = () => countStore.set(0);
+	 */
 	set: (setter: Setter<T>) => void;
+	/**
+	 * Subscribe to the state of the store.
+	 * Returns a function to unsubscribe.
+	 *
+	 * @param callback - The callback to subscribe to.
+	 * @returns A function to unsubscribe.
+	 * @example
+	 * const countStore = store(0);
+	 * const unsubscribe = countStore.listen((count) => {
+	 *   console.log(count);
+	 * });
+	 *
+	 * // On component unmount or other cleanup:
+	 * unsubscribe();
+	 *
+	 */
 	listen: (callback: (state: T) => void) => () => void;
+	/**
+	 * Select a key from the state of the store.
+	 * This returns a new store with the selected key as the state.
+	 * @example
+	 * const documentStore = store({
+	 *   title: "Untitled",
+	 * });
+	 *
+	 * const titleStore = documentStore.select("title");
+	 * console.log(titleStore.get()); // "Untitled"
+	 *
+	 * titleStore.set("New Title");
+	 * console.log(titleStore.get()); // "New Title"
+	 * console.log(documentStore.get()); // { title: "New Title" }
+	 */
 	select: SelectFn<T>;
 };
 
+/**
+ * Creates a store with properties for getting, setting, subscribing to, and selecting from the state.
+ *
+ * @param initial - The initial state of the store.
+ * @returns A store with the initial state applied.
+ * @example
+ * // Infer types from the initial state
+ * const documentStore = store({
+ *   title: "Untitled",
+ *   createdAt: new Date(),
+ *   authors: [] as string[],
+ * });
+ *
+ * // Or manually specify the type
+ * type DocumentStore = {
+ *   title: string;
+ *   createdAt: Date;
+ *   authors: string[];
+ * }
+ * const documentStore = store<DocumentStore>({
+ *   title: "Untitled",
+ *   createdAt: new Date(),
+ *   authors: [],
+ * });
+ */
 export function store(initial: number): Store<number>;
 export function store(initial: string): Store<string>;
 export function store(initial: boolean): Store<boolean>;
