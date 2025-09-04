@@ -43,7 +43,7 @@ function Title() {
 
 ### store(initial)
 
-Creates a store with `get`, `set`, `listen`, and (for objects and arrays) `select`.
+Creates a store with `get`, `set`, `subscribe`, and (for objects and arrays) `select`.
 
 - Parameters: `initial: number | string | boolean | null | undefined | object`
 - Returns: `Store<T>` where `T` is inferred from `initial` or supplied via generics
@@ -55,7 +55,7 @@ const counter = store(0);
 counter.set((n) => n + 1);
 console.log(counter.get()); // 1
 
-// Select sub-stores for objects and arrays
+// Select parts of a store for objects and arrays
 const doc = store({ title: "x" });
 const title = doc.select("title");
 ```
@@ -69,15 +69,17 @@ React hook to subscribe to a store and get its current value.
 - Parameters: `store: Store<T> | undefined`
 - Returns: `T | undefined`
 
-```ts path=null start=null
-import { store } from "simplestack-store";
-import { useStoreValue } from "simplestack-store/react";
+```tsx
+import { store } from "@simplestack/store";
+import { useStoreValue } from "@simplestack/store/react";
 
-const counter = store(0);
+const counterStore = store(0);
 
 function Counter() {
-  const value = useStoreValue(counter);
-  return <span>{value}</span>;
+  const counter = useStoreValue(counterStore);
+  return (
+    <button onClick={() => counterStore.set((n) => n + 1)}>{counter}</button>
+  );
 }
 ```
 
@@ -91,7 +93,7 @@ These types are exported for TypeScript users.
 - Store<T>:
   - `get(): T`
   - `set(setter: Setter<T>): void`
-  - `listen(callback: (state: T) => void): () => void`
+  - `subscribe(callback: (state: T) => void): () => void`
   - `select(key: K): Store<SelectValue<T, K>>`: present only when `T` is an object or array
 
 ## Contributing
