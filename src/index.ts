@@ -136,5 +136,3 @@ type Note = {
 const noteStore = store({
     notes: [] as Note[],
 })
-
-const firstNoteTitle = noteStore.select("notes").select(0).select?.('title');
