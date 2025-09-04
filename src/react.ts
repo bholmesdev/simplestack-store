@@ -22,7 +22,7 @@ export function useStoreValue<T extends StateObject | StatePrimitive>(
 ) {
 	const [state, setState] = useState<T | undefined>(store?.get());
 	useEffect(() => {
-		return store?.listen(setState);
+		return store?.subscribe(setState);
 	}, [store]);
 	return state;
 }

@@ -55,7 +55,7 @@ export type Store<T extends StateObject | StatePrimitive> = {
 	 * @returns A function to unsubscribe.
 	 * @example
 	 * const countStore = store(0);
-	 * const unsubscribe = countStore.listen((count) => {
+	 * const unsubscribe = countStore.subscribe((count) => {
 	 *   console.log(count);
 	 * });
 	 *
@@ -63,7 +63,7 @@ export type Store<T extends StateObject | StatePrimitive> = {
 	 * unsubscribe();
 	 *
 	 */
-	listen: (callback: (state: T) => void) => () => void;
+	subscribe: (callback: (state: T) => void) => () => void;
 	/**
 	 * Select a key from the state of the store.
 	 * This returns a new store with the selected key as the state.
@@ -127,14 +127,14 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 	get: () => S,
 	set: (setter: Setter<S>) => void,
 ): Store<S> => {
-	const listen = (callback: (state: S) => void) => {
+	const subscribe = (callback: (state: S) => void) => {
 		return effect(() => {
 			callback(get());
 		});
 	};
 
 	if (isStatePrimitive(get())) {
-		return { get, set, listen, select: undefined as SelectFn<S> };
+		return { get, set, subscribe, select: undefined as SelectFn<S> };
 	}
 
 	function select<K extends keyof S>(key: K): Store<SelectValue<S, K>> {
@@ -163,7 +163,7 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		return createStoreApi(getSelected, setSelected);
 	}
 
-	return { get, set, listen, select: select as SelectFn<S> };
+	return { get, set, subscribe, select: select as SelectFn<S> };
 };
 
 const UNEXPECTED_SELECT_ERROR =
