@@ -1,6 +1,10 @@
 # Simple Store
 
-A simple, `select`-xcellent state management library that makes it easier to manage shared state in React.
+A simple, `select`-xcellent state management library for React.
+
+The goal: make a storage solution as powerful as Zustand or Redux, without complicated functions to set and select state.
+
+Here's an overview of how stores are created, and how you can operate on parts of a store using `.select()`:
 
 ```tsx
 import { store } from "@simplestack/store";
