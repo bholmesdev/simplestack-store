@@ -29,6 +29,10 @@
 	],
 	"author": "bholmesdev",
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/bholmesdev/simplestack-store.git"
+	},
 	"packageManager": "pnpm@10.12.1",
 	"devDependencies": {
 		"@biomejs/biome": "2.2.2",
