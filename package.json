@@ -29,6 +29,7 @@
 	],
 	"author": "bholmesdev",
 	"license": "MIT",
+	"homepage": "https://simple-stack.dev/store",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/bholmesdev/simplestack-store.git"
