@@ -20,10 +20,6 @@ const documentStore = store({
   },
 });
 
-// Select parts of a store to listen to individually
-const titleStore = documentStore.select("title");
-const tagsStore = documentStore.select("meta").select("tags");
-
 function Document() {
   // Update your UI with the store's current state
   const { title, tags } = useStoreValue(documentStore);
@@ -33,6 +29,10 @@ function Document() {
     </div>
   );
 }
+
+// Or, select parts of a store to listen to individually
+const titleStore = documentStore.select("title");
+const tagsStore = documentStore.select("meta").select("tags");
 
 function Title() {
   // And scope updates with selected stores for fine-grained control
