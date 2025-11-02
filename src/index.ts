@@ -17,17 +17,17 @@ export type Setter<T extends StateObject | StatePrimitive> =
 export type SelectValue<S, K extends keyof S> = S extends readonly (infer U)[] // Arrays: any index access may be out of bounds
 	? U | undefined
 	: // Index-signature records: broad key access may be missing
-		string extends keyof S
-		? S[K] | undefined
-		: number extends keyof S
-			? S[K] | undefined
-			: S[K];
+	string extends keyof S
+	? S[K] | undefined
+	: number extends keyof S
+	? S[K] | undefined
+	: S[K];
 
 // Make `select` always present but typed as undefined when the state may not be an object
 export type SelectFn<T extends StateObject | StatePrimitive> =
 	T extends StateObject
-		? <K extends keyof T>(key: K) => Store<SelectValue<T, K>>
-		: undefined;
+	? <K extends keyof T>(key: K) => Store<SelectValue<T, K>>
+	: undefined;
 
 export type Store<T extends StateObject | StatePrimitive> = {
 	/**
@@ -127,9 +127,15 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 	get: () => S,
 	set: (setter: Setter<S>) => void,
 ): Store<S> => {
+	// Track the previous value to avoid unnecessary updates when effects are triggered.
+	let previousValue: S | undefined;
 	const subscribe = (callback: (state: S) => void) => {
 		return effect(() => {
-			callback(get());
+			const value = get();
+			if (!Object.is(previousValue, value)) {
+				previousValue = value;
+				callback(value);
+			}
 		});
 	};
 
