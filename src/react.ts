@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import type { StateObject, StatePrimitive, Store } from "./index.js";
 
 /**
@@ -20,9 +20,9 @@ export function useStoreValue(store: undefined): undefined;
 export function useStoreValue<T extends StateObject | StatePrimitive>(
 	store: Store<T> | undefined,
 ) {
-	const [state, setState] = useState<T | undefined>(store?.get());
-	useEffect(() => {
-		return store?.subscribe(setState);
-	}, [store]);
-	return state;
+	return useSyncExternalStore(
+		store?.subscribe ?? (() => () => {}),
+		() => store?.get() as T | undefined,
+		() => store?.get() as T | undefined,
+	);
 }

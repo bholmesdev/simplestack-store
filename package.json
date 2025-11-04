@@ -21,6 +21,9 @@
 		"build": "tsc",
 		"dev": "tsc -w",
 		"check": "biome check",
+		"check:fix": "biome check --write .",
+		"test": "vitest run",
+		"test:ui": "vitest --ui",
 		"prepublishOnly": "pnpm run build"
 	},
 	"keywords": [
@@ -36,10 +39,15 @@
 	},
 	"packageManager": "pnpm@10.12.1",
 	"devDependencies": {
-		"@biomejs/biome": "2.2.2",
-		"@types/react": "^19.1.12",
-		"react": "^19.0.0",
-		"typescript": "^5.9.2"
+		"@biomejs/biome": "2.3.3",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/react": "^16.3.0",
+		"@types/react": "^19.2.2",
+		"@vitest/ui": "^4.0.6",
+		"happy-dom": "^20.0.10",
+		"react": "^19.2.0",
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.6"
 	},
 	"dependencies": {
 		"signal-polyfill": "^0.2.2"
