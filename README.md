@@ -1,4 +1,35 @@
-# Simple Store
+<div align='center'>
+    <h1>Simple Store</h1>
+</div>
+
+<div align='center'>
+    <a href='https://github.com/bholmesdev' rel='nofollow'>
+        <img alt='Created by Ben Holmes'
+            src='https://img.shields.io/badge/created%20by-Ben%20Holmes-3278C6.svg'>
+    </a>
+    <a href='https://github.com/bholmesdev/simplestack-store/stargazers' rel='nofollow'>
+        <img alt='stars' src='https://img.shields.io/github/stars/bholmesdev/simplestack-store?color=blue'>
+    </a>
+</div>
+
+<div align='center'>
+    <a href='https://www.npmjs.com/package/@simplestack/store' rel='nofollow'>
+        <img alt='npm' src='https://img.shields.io/npm/v/@simplestack/store?color=blue'>
+    </a>
+    <a href='https://www.npmjs.com/package/@simplestack/store' rel='nofollow'>
+        <img alt='downloads' src='https://img.shields.io/npm/dw/@simplestack/store?color=blue'>
+    </a>
+</div>
+
+<div align="center">
+    <a href="https://simple-stack.dev/store">docs</a>
+    <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+    <a href="https://github.com/bholmesdev/simplestack-store">github</a>
+    <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+    <a href="https://www.npmjs.com/package/@simplestack/store">npm</a>
+</div>
+
+<hr />
 
 A simple, `select`-xcellent state management library for React.
 
