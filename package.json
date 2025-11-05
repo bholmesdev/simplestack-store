@@ -53,7 +53,7 @@
 		"signal-polyfill": "^0.2.2"
 	},
 	"peerDependencies": {
-		"react": "^17.0.0 || ^18.0.0 || ^19.0.0"
+		"react": "^18.0.0 || ^19.0.0"
 	},
 	"peerDependenciesMeta": {
 		"react": {
