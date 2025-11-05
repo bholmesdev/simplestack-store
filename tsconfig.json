@@ -13,7 +13,9 @@
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"skipLibCheck": true,
-		"isolatedModules": true
+		"isolatedModules": true,
+		"jsx": "react-jsx",
+		"types": ["vitest/globals"]
 	},
 	"include": ["src"],
 	"exclude": ["dist", "node_modules"]
