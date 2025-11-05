@@ -47,7 +47,7 @@ function Title() {
 
 ### store(initial)
 
-Creates a store with `get`, `set`, `subscribe`, and (for objects and arrays) `select`.
+Creates a store with `get`, `getInitial`, `set`, `subscribe`, and (for objects and arrays) `select`.
 
 - Parameters: `initial: number | string | boolean | null | undefined | object`
 - Returns: `Store<T>` where `T` is inferred from `initial` or supplied via generics
@@ -96,6 +96,7 @@ These types are exported for TypeScript users.
 - Setter<T>: `T | ((state: T) => T)`
 - Store<T>:
   - `get(): T`
+  - `getInitial(): T`
   - `set(setter: Setter<T>): void`
   - `subscribe(callback: (state: T) => void): () => void`
   - `select(key: K): Store<SelectValue<T, K>>`: present only when `T` is an object or array
