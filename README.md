@@ -22,7 +22,7 @@ const documentStore = store({
 
 function Document() {
   // Update your UI with the store's current state
-  const { title, tags } = useStoreValue(documentStore);
+  const { title, meta: { tags } } = useStoreValue(documentStore);
   return (
     <div>
       {title} {tags.join(", ")}
