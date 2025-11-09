@@ -68,7 +68,7 @@ const title = doc.select("title");
 
 #### useStoreValue(store)
 
-React hook to subscribe to a store and get its current value.
+A React hook to subscribe to a store and get its current value.
 
 - Parameters: `store: Store<T> | undefined`
 - Returns: `T | undefined`
