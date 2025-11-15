@@ -12,5 +12,7 @@ export default defineConfig({
 			include: ["src/**/*.{ts,tsx}"],
 			exclude: ["src/**/*.{test,spec}.{ts,tsx}"],
 		},
+		mockReset: true,
+		restoreMocks: true,
 	},
 });
