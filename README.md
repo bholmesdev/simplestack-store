@@ -1,5 +1,7 @@
 # Simple Store
 
+[![I fixed Zustand's BIGGEST problem](https://img.youtube.com/vi/gXz-lLIJbMI/0.jpg)](https://www.youtube.com/watch?v=gXz-lLIJbMI)
+
 A simple, `select`-xcellent state management library for React.
 
 The goal: make a storage solution as powerful as Zustand or Redux, without complicated functions to set and select state.
