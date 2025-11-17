@@ -1,5 +1,14 @@
 # Simple Store
 
+<div>
+    <a href='https://github.com/bholmesdev/simplestack-store/stargazers' rel='nofollow'>
+        <img alt='stars' src='https://img.shields.io/github/stars/bholmesdev/simplestack-store?color=blue'>
+    </a>
+    <a href='https://www.npmjs.com/package/@simplestack/store' rel='nofollow'>
+        <img alt='npm' src='https://img.shields.io/npm/v/@simplestack/store?color=blue'>
+    </a>
+</div>
+
 [![I fixed Zustand's BIGGEST problem](https://img.youtube.com/vi/gXz-lLIJbMI/0.jpg)](https://www.youtube.com/watch?v=gXz-lLIJbMI)
 
 A simple, `select`-xcellent state management library for React.
