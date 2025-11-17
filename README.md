@@ -104,7 +104,7 @@ These types are exported for TypeScript users.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit an issue or pull request.
+We are open to contributions! **Before submitting your feature request**, please read the [CONTRIBUTING.md](CONTRIBUTING.md) for our issue and PR process.
 
 ## License
 
