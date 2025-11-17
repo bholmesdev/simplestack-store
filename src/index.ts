@@ -162,11 +162,11 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 
 	function select<K extends keyof S>(key: K): Store<SelectValue<S, K>> {
 		const getInitialSelected = (): SelectValue<S, K> => {
-			const state = getInitial();
-			if (isStatePrimitive(state)) {
+			const initialState = getInitial();
+			if (isStatePrimitive(initialState)) {
 				throw new Error(UNEXPECTED_SELECT_ERROR);
 			}
-			return state[key];
+			return initialState[key];
 		};
 		const getSelected = (): SelectValue<S, K> => {
 			const state = get();

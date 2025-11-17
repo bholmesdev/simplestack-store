@@ -284,7 +284,7 @@ describe("store", () => {
 				expect(objStore.getInitial()).toEqual({ name: "Alice", age: 30 });
 			});
 
-			it("should return initial value even after store is updated", () => {
+			it("should return initial value after store is updated", () => {
 				const objStore = store({ name: "Alice", age: 30 });
 				expect(objStore.getInitial()).toEqual({ name: "Alice", age: 30 });
 
@@ -312,6 +312,8 @@ describe("store", () => {
 			it("should preserve initial object reference", () => {
 				const initialObj = { name: "Alice", age: 30 };
 				const objStore = store(initialObj);
+				objStore.set({ name: 'Ben', age: 28 });
+
 				expect(objStore.getInitial()).toBe(initialObj);
 			});
 		});
@@ -322,7 +324,7 @@ describe("store", () => {
 				expect(arrStore.getInitial()).toEqual([1, 2, 3]);
 			});
 
-			it("should return initial value even after store is updated", () => {
+			it("should return initial value after store is updated", () => {
 				const arrStore = store([1, 2, 3]);
 				expect(arrStore.getInitial()).toEqual([1, 2, 3]);
 
@@ -350,6 +352,7 @@ describe("store", () => {
 			it("should preserve initial array reference", () => {
 				const initialArr = [1, 2, 3];
 				const arrStore = store(initialArr);
+				arrStore.set([4, 5, 6]);
 				expect(arrStore.getInitial()).toBe(initialArr);
 			});
 		});
@@ -361,7 +364,7 @@ describe("store", () => {
 				expect(nameStore.getInitial()).toBe("Alice");
 			});
 
-			it("should return initial value even after selected store is updated", () => {
+			it("should return initial value after selected store is updated", () => {
 				const objStore = store({ name: "Alice", age: 30 });
 				const nameStore = objStore.select("name");
 				expect(nameStore.getInitial()).toBe("Alice");
@@ -371,7 +374,7 @@ describe("store", () => {
 				expect(nameStore.get()).toBe("Bob");
 			});
 
-			it("should return initial value even after parent store is updated", () => {
+			it("should return initial value after parent store is updated", () => {
 				const objStore = store({ name: "Alice", age: 30 });
 				const nameStore = objStore.select("name");
 
