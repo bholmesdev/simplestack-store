@@ -559,4 +559,269 @@ describe("useStoreValue", () => {
 			});
 		});
 	});
+
+	describe("selectPath", () => {
+		it("should work with string path", async () => {
+			const bookStore = store({
+				book: {
+					author: {
+						name: "F. Scott Fitzgerald",
+					},
+				},
+			});
+
+			const authorNameStore = bookStore.selectPath("book.author.name");
+			const { result } = renderHook(() => useStoreValue(authorNameStore));
+
+			expect(result.current).toBe("F. Scott Fitzgerald");
+
+			act(() => {
+				authorNameStore.set("Ernest Hemingway");
+			});
+
+			await waitFor(() => {
+				expect(result.current).toBe("Ernest Hemingway");
+			});
+		});
+
+		it("should work with tuple path", async () => {
+			const store1 = store({
+				"weird.key": {
+					"another.key": {
+						value: 123,
+					},
+				},
+			});
+
+			const valueStore = store1.selectPath(["weird.key", "another.key", "value"] as const);
+			const { result } = renderHook(() => useStoreValue(valueStore));
+
+			expect(result.current).toBe(123);
+
+			act(() => {
+				valueStore.set(456);
+			});
+
+			await waitFor(() => {
+				expect(result.current).toBe(456);
+			});
+		});
+
+		it("should update when parent changes nested value", async () => {
+			const userStore = store({
+				user: {
+					profile: {
+						name: "Alice",
+						email: "alice@example.com",
+					},
+				},
+			});
+
+			const nameStore = userStore.selectPath("user.profile.name");
+			const { result } = renderHook(() => useStoreValue(nameStore));
+
+			expect(result.current).toBe("Alice");
+
+			act(() => {
+				userStore.set({
+					user: {
+						profile: {
+							name: "Bob",
+							email: "alice@example.com",
+						},
+					},
+				});
+			});
+
+			await waitFor(() => {
+				expect(result.current).toBe("Bob");
+			});
+		});
+
+		it("should not re-render when unrelated nested value changes", async () => {
+			const appStore = store({
+				user: {
+					name: "Alice",
+					settings: {
+						theme: "dark",
+					},
+				},
+			});
+
+			const nameStore = appStore.selectPath("user.name");
+			const renderSpy = vi.fn();
+
+			function UserName() {
+				const name = useStoreValue(nameStore);
+				renderSpy();
+				return <div>{name}</div>;
+			}
+
+			render(<UserName />);
+
+			const initialRenderCount = renderSpy.mock.calls.length;
+
+			// Change settings, which the component doesn't care about
+			act(() => {
+				appStore.set({
+					user: {
+						name: "Alice",
+						settings: {
+							theme: "light",
+						},
+					},
+				});
+			});
+
+			// Should not have re-rendered
+			expect(renderSpy.mock.calls.length).toBe(initialRenderCount);
+		});
+
+		it("should work with array indices in path", async () => {
+			const cartStore = store({
+				items: [
+					{ name: "Item 1", price: 10 },
+					{ name: "Item 2", price: 20 },
+				],
+			});
+
+			const item1NameStore = cartStore.selectPath("items.0.name");
+			const { result } = renderHook(() => useStoreValue(item1NameStore));
+
+			expect(result.current).toBe("Item 1");
+
+			act(() => {
+				item1NameStore.set("Updated Item 1");
+			});
+
+			await waitFor(() => {
+				expect(result.current).toBe("Updated Item 1");
+			});
+
+			expect(cartStore.get().items[0].name).toBe("Updated Item 1");
+			expect(cartStore.get().items[1].name).toBe("Item 2");
+		});
+
+		it("should support multiple components subscribed to different paths", async () => {
+			const appStore = store({
+				dashboard: {
+					widgets: {
+						weather: { temp: 72 },
+						clock: { time: "10:00" },
+					},
+				},
+			});
+
+			const tempStore = appStore.selectPath("dashboard.widgets.weather.temp");
+			const timeStore = appStore.selectPath("dashboard.widgets.clock.time");
+
+			function WeatherWidget() {
+				const temp = useStoreValue(tempStore);
+				return <div data-testid="temp">{temp}</div>;
+			}
+
+			function ClockWidget() {
+				const time = useStoreValue(timeStore);
+				return <div data-testid="time">{time}</div>;
+			}
+
+			render(
+				<>
+					<WeatherWidget />
+					<ClockWidget />
+				</>,
+			);
+
+			expect(screen.getByTestId("temp")).toHaveTextContent("72");
+			expect(screen.getByTestId("time")).toHaveTextContent("10:00");
+
+			act(() => {
+				tempStore.set(75);
+			});
+
+			await waitFor(() => {
+				expect(screen.getByTestId("temp")).toHaveTextContent("75");
+			});
+
+			expect(screen.getByTestId("time")).toHaveTextContent("10:00");
+		});
+
+		it("should work with deeply nested paths (4+ levels)", async () => {
+			const configStore = store({
+				app: {
+					user: {
+						preferences: {
+							theme: {
+								colors: {
+									primary: "#007bff",
+								},
+							},
+						},
+					},
+				},
+			});
+
+			const primaryColorStore = configStore.selectPath(
+				"app.user.preferences.theme.colors.primary",
+			);
+			const { result } = renderHook(() => useStoreValue(primaryColorStore));
+
+			expect(result.current).toBe("#007bff");
+
+			act(() => {
+				primaryColorStore.set("#ff0000");
+			});
+
+			await waitFor(() => {
+				expect(result.current).toBe("#ff0000");
+			});
+
+			expect(
+				configStore.get().app.user.preferences.theme.colors.primary,
+			).toBe("#ff0000");
+		});
+
+		it("should handle function setters with selectPath", async () => {
+			const counterStore = store({
+				nested: {
+					count: 5,
+				},
+			});
+
+			const countStore = counterStore.selectPath("nested.count");
+
+			function Counter() {
+				const count = useStoreValue(countStore);
+				return (
+					<button
+						type="button"
+						data-testid="increment"
+						onClick={() => countStore.set((n) => n + 1)}
+					>
+						{count}
+					</button>
+				);
+			}
+
+			render(<Counter />);
+
+			expect(screen.getByTestId("increment")).toHaveTextContent("5");
+
+			act(() => {
+				screen.getByTestId("increment").click();
+			});
+
+			await waitFor(() => {
+				expect(screen.getByTestId("increment")).toHaveTextContent("6");
+			});
+
+			act(() => {
+				screen.getByTestId("increment").click();
+			});
+
+			await waitFor(() => {
+				expect(screen.getByTestId("increment")).toHaveTextContent("7");
+			});
+		});
+	});
 });
