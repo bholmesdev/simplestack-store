@@ -1,4 +1,3 @@
-import { describe, expect, it, vi } from "vitest";
 import { store } from "./index.js";
 import { nextTick } from "./test-utils.js";
 

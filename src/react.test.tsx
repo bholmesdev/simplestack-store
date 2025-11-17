@@ -6,7 +6,6 @@ import {
 	waitFor,
 } from "@testing-library/react";
 import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
 import { store } from "./index.js";
 import { useStoreValue } from "./react.js";
 
