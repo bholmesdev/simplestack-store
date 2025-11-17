@@ -24,6 +24,7 @@
 		"check:fix": "biome check --write .",
 		"test": "vitest run",
 		"test:ui": "vitest --ui",
+		"bench": "vitest bench",
 		"prepublishOnly": "pnpm run build"
 	},
 	"keywords": [

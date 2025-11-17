@@ -29,6 +29,71 @@ export type SelectFn<T extends StateObject | StatePrimitive> =
 		? <K extends keyof T>(key: K) => Store<SelectValue<T, K>>
 		: undefined;
 
+type StringPaths<T> = T extends StatePrimitive
+	? never
+	: T extends readonly (infer U)[]
+		? `${number}` | `${number}.${StringPaths<U>}`
+		: {
+				[K in keyof T & (string | number)]: K extends string | number
+					? T[K] extends StatePrimitive
+						? `${K}`
+						: T[K] extends readonly (infer U)[]
+							? `${K}` | `${K}.${number}` | `${K}.${number}.${StringPaths<U>}`
+							: T[K] extends StateObject
+								? `${K}` | `${K}.${StringPaths<T[K]>}`
+								: `${K}`
+					: never;
+			}[keyof T & (string | number)];
+
+type TuplePaths<T> = T extends StatePrimitive
+	? readonly []
+	: T extends readonly (infer U)[]
+		? readonly [number, ...TuplePaths<U>]
+		: {
+				[K in keyof T & (string | number)]: T[K] extends StatePrimitive
+					? readonly [K]
+					: T[K] extends readonly (infer U)[]
+						? readonly [K] | readonly [K, number, ...TuplePaths<U>]
+						: T[K] extends StateObject
+							? readonly [K] | readonly [K, ...TuplePaths<T[K]>]
+							: readonly [K];
+			}[keyof T & (string | number)];
+
+type StringPathValue<T, P extends string> = P extends `${infer K}.${infer Rest}`
+	? K extends keyof T
+		? T[K] extends readonly (infer U)[]
+			? Rest extends `${number}.${infer After}`
+				? StringPathValue<U, After>
+				: Rest extends `${number}`
+					? SelectValue<T[K], number>
+					: never
+			: T[K] extends StateObject
+				? StringPathValue<T[K], Rest>
+				: never
+		: never
+	: P extends keyof T
+		? SelectValue<T, P>
+		: never;
+
+type TuplePathValue<T, P extends readonly (string | number)[]> =
+	P extends readonly [infer K, ...infer Rest]
+		? Rest extends readonly (string | number)[]
+			? K extends keyof T
+				? Rest["length"] extends 0
+					? SelectValue<T, K>
+					: TuplePathValue<T[K], Rest>
+				: never
+			: never
+		: T;
+
+export type SelectPathFn<T extends StateObject | StatePrimitive> =
+	T extends StateObject
+		? {
+				<P extends StringPaths<T> & string>(path: P): Store<StringPathValue<T, P>>;
+				<P extends TuplePaths<T>>(path: P): Store<TuplePathValue<T, P>>;
+			}
+		: undefined;
+
 export type Store<T extends StateObject | StatePrimitive> = {
 	/**
 	 * Get the current state of the store.
@@ -80,6 +145,16 @@ export type Store<T extends StateObject | StatePrimitive> = {
 	 * console.log(documentStore.get()); // { title: "New Title" }
 	 */
 	select: SelectFn<T>;
+	/**
+	 * Select a nested path using dot notation or tuple array.
+	 * @example
+	 * // Dot notation
+	 * store.selectPath("book.author.name")
+	 *
+	 * // Tuple notation for keys with dots
+	 * store.selectPath(["weird.key.1", "sub.key", "value"])
+	 */
+	selectPath: SelectPathFn<T>;
 };
 
 /**
@@ -142,7 +217,13 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 	};
 
 	if (isStatePrimitive(get())) {
-		return { get, set, subscribe, select: undefined as SelectFn<S> };
+		return {
+			get,
+			set,
+			subscribe,
+			select: undefined as SelectFn<S>,
+			selectPath: undefined as SelectPathFn<S>,
+		};
 	}
 
 	function select<K extends keyof S>(key: K): Store<SelectValue<S, K>> {
@@ -177,7 +258,77 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		return createStoreApi(getSelected, setSelected);
 	}
 
-	return { get, set, subscribe, select: select as SelectFn<S> };
+	function selectPath(
+		path: string | readonly (string | number)[],
+	): Store<StateObject | StatePrimitive> {
+		const pathParts = Array.isArray(path)
+			? Array.from(path)
+			: (path as string).split(".");
+
+		const getSelected = () => {
+			const state = get();
+			if (isStatePrimitive(state)) {
+				throw new Error(UNEXPECTED_SELECT_ERROR);
+			}
+			let current: any = state;
+			for (const part of pathParts) {
+				if (isStatePrimitive(current)) {
+					throw new Error(UNEXPECTED_SELECT_ERROR);
+				}
+				current = current[part];
+			}
+			return current;
+		};
+
+		const setSelected = (setter: Setter<StateObject | StatePrimitive>) => {
+			set((state) => {
+				if (isStatePrimitive(state)) {
+					throw new Error(UNEXPECTED_SELECT_ERROR);
+				}
+
+				const updateNested = (
+					obj: StateObject | unknown[],
+					keys: readonly (string | number)[],
+					value: unknown,
+				): StateObject | unknown[] => {
+					if (keys.length === 0) return value as StateObject | unknown[];
+					const [first, ...rest] = keys;
+
+					if (Array.isArray(obj)) {
+						const newArray = [...obj];
+						const idx = typeof first === "number" ? first : Number(first);
+						newArray[idx] = updateNested(newArray[idx] as StateObject | unknown[], rest, value);
+						return newArray;
+					}
+
+					return { ...obj, [first]: updateNested(obj[first] as StateObject | unknown[], rest, value) };
+				};
+
+				const prev = pathParts.reduce(
+					(acc: any, key: string | number) => acc?.[key],
+					state as any,
+				);
+				const next = typeof setter === "function" ? setter(prev) : setter;
+
+				if (Object.is(prev, next)) return state;
+
+				return updateNested(state, pathParts as (string | number)[], next) as S;
+			});
+		};
+
+		return createStoreApi(
+			getSelected as () => StateObject | StatePrimitive,
+			setSelected,
+		);
+	}
+
+	return {
+		get,
+		set,
+		subscribe,
+		select: select as SelectFn<S>,
+		selectPath: selectPath as SelectPathFn<S>,
+	};
 };
 
 const UNEXPECTED_SELECT_ERROR =
