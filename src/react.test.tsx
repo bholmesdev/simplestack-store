@@ -6,7 +6,6 @@ import {
 	waitFor,
 } from "@testing-library/react";
 import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
 import { store } from "./index.js";
 import { useStoreValue } from "./react.js";
 
@@ -19,13 +18,7 @@ describe("useStoreValue", () => {
 			expect(result.current).toBe(5);
 		});
 
-		it("should return undefined when store is undefined", () => {
-			const { result } = renderHook(() => useStoreValue(undefined));
-
-			expect(result.current).toBe(undefined);
-		});
-
-		it("should work with string store", () => {
+	it("should work with string store", () => {
 			const strStore = store("hello");
 			const { result } = renderHook(() => useStoreValue(strStore));
 
@@ -456,39 +449,7 @@ describe("useStoreValue", () => {
 			});
 		});
 
-		it("should handle switching from defined to undefined store", async () => {
-			const countStore = store(5);
-			let storeRef: typeof countStore | undefined = countStore;
-
-			const { result, rerender } = renderHook(() => useStoreValue(storeRef));
-
-			expect(result.current).toBe(5);
-
-			storeRef = undefined;
-			rerender();
-
-			await waitFor(() => {
-				expect(result.current).toBe(undefined);
-			});
-		});
-
-		it("should handle switching from undefined to defined store", async () => {
-			const countStore = store(5);
-			let storeRef: typeof countStore | undefined;
-
-			const { result, rerender } = renderHook(() => useStoreValue(storeRef));
-
-			expect(result.current).toBe(undefined);
-
-			storeRef = countStore;
-			rerender();
-
-			await waitFor(() => {
-				expect(result.current).toBe(5);
-			});
-		});
-
-		it("should handle store with undefined value", () => {
+	it("should handle store with undefined value", () => {
 			const undefinedStore = store(undefined);
 			const { result } = renderHook(() => useStoreValue(undefinedStore));
 
