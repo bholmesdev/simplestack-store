@@ -1,6 +1,6 @@
 {
 	"name": "@simplestack/store",
-	"version": "0.7.0",
+	"version": "0.7.1",
 	"description": "A simple storage solution for React",
 	"type": "module",
 	"main": "dist/index.js",
