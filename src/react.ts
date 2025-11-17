@@ -12,17 +12,10 @@ import type { StateObject, StatePrimitive, Store } from "./index.js";
  */
 export function useStoreValue<T extends StateObject | StatePrimitive>(
 	store: Store<T>,
-): T;
-export function useStoreValue<T extends StateObject | StatePrimitive>(
-	store: Store<T> | undefined,
-): T | undefined;
-export function useStoreValue(store: undefined): undefined;
-export function useStoreValue<T extends StateObject | StatePrimitive>(
-	store: Store<T> | undefined,
 ) {
 	return useSyncExternalStore(
-		store?.subscribe ?? (() => () => {}),
-		() => store?.get() as T | undefined,
-		() => store?.get() as T | undefined,
+		store.subscribe,
+		() => store.get() as T,
+		() => store.get() as T,
 	);
 }
