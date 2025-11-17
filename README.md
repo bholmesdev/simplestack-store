@@ -36,6 +36,9 @@ function Document() {
 const titleStore = documentStore.select("title");
 const tagsStore = documentStore.select("meta").select("tags");
 
+// Or use selectPath for nested access with dot notation
+const tagsStore2 = documentStore.selectPath("meta.tags");
+
 function Title() {
   // And scope updates with selected stores for fine-grained control
   const title = useStoreValue(titleStore);
@@ -49,7 +52,7 @@ function Title() {
 
 ### store(initial)
 
-Creates a store with `get`, `set`, `subscribe`, and (for objects and arrays) `select`.
+Creates a store with `get`, `set`, `subscribe`, and (for objects and arrays) `select` and `selectPath`.
 
 - Parameters: `initial: number | string | boolean | null | undefined | object`
 - Returns: `Store<T>` where `T` is inferred from `initial` or supplied via generics
@@ -64,6 +67,45 @@ console.log(counter.get()); // 1
 // Select parts of a store for objects and arrays
 const doc = store({ title: "x" });
 const title = doc.select("title");
+
+// Or use selectPath for nested access
+const nested = store({ user: { profile: { name: "Alice" } } });
+const name = nested.selectPath("user.profile.name");
+console.log(name.get()); // "Alice"
+```
+
+### selectPath(path)
+
+Select a nested value using dot notation or a tuple array. Available on object and array stores.
+
+- Parameters: `path: string | readonly (string | number)[]`
+- Returns: `Store<T>` where `T` is the type of the value at the path
+
+```ts
+const bookStore = store({
+  book: {
+    author: {
+      name: "F. Scott Fitzgerald",
+    },
+  },
+});
+
+// Dot notation for clean access
+const authorName = bookStore.selectPath("book.author.name");
+console.log(authorName.get()); // "F. Scott Fitzgerald"
+
+// Tuple notation for keys containing dots
+const weirdStore = store({
+  "key.with.dots": {
+    "another.key": { value: 123 },
+  },
+});
+const value = weirdStore.selectPath(["key.with.dots", "another.key", "value"] as const);
+console.log(value.get()); // 123
+
+// Works with arrays too
+const items = store({ items: [{ name: "Item 1" }, { name: "Item 2" }] });
+const firstItemName = items.selectPath("items.0.name");
 ```
 
 ### React
@@ -101,6 +143,7 @@ These types are exported for TypeScript users.
   - `set(setter: Setter<T>): void`
   - `subscribe(callback: (state: T) => void): () => void`
   - `select(key: K): Store<SelectValue<T, K>>`: present only when `T` is an object or array
+  - `selectPath(path: string | readonly (string | number)[]): Store<U>`: present only when `T` is an object or array, where `U` is the type at the path
 
 ## Contributing
 
