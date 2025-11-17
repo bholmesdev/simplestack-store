@@ -106,10 +106,11 @@ These types are exported for TypeScript users.
 - StatePrimitive: `string | number | boolean | null | undefined`
 - Setter<T>: `T | ((state: T) => T)`
 - Store<T>:
-  - `get(): T`
-  - `set(setter: Setter<T>): void`
-  - `subscribe(callback: (state: T) => void): () => void`
-  - `select(key: K): Store<SelectValue<T, K>>`: present only when `T` is an object or array
+  - `get(): T` - Get the current value of the store.
+  - `set(setter: Setter<T>): void` - Set the value directly or by using a function that receives the current state.
+  - `subscribe(callback: (state: T) => void): () => void` - Subscribe with a callback. Returns an unsubscribe function.
+  - `select(key: K): Store<SelectValue<T, K>>` (present only when `T` is an object or array) - Select a key or array index of the store. Returns a nested Store.
+  - `getInitial(): T` - Get the initial state the store was created with. Used internally for SSR resume-ability.
 
 ## Contributing
 

@@ -38,6 +38,13 @@ export type Store<T extends StateObject | StatePrimitive> = {
 	 */
 	get: () => T;
 	/**
+	 * Get the initial state of the store.
+	 * @example
+	 * const initial = store(0).getInitial();
+	 * console.log(initial); // 0
+	 */
+	getInitial: () => T;
+	/**
 	 * Set the state of the store.
 	 * Can pass either a value or a function that receives the current state and returns the new state.
 	 *
@@ -117,13 +124,15 @@ export function store<T extends StateObject | StatePrimitive>(
 	initial: T,
 ): Store<T> {
 	const state = new Signal.State<T>(initial);
+	const getInitial = () => initial;
 	const get = () => state.get();
 	const set = (setter: Setter<T>) =>
 		state.set(typeof setter === "function" ? setter(state.get()) : setter);
-	return createStoreApi(get, set);
+	return createStoreApi(getInitial, get, set);
 }
 
 const createStoreApi = <S extends StateObject | StatePrimitive>(
+	getInitial: () => S,
 	get: () => S,
 	set: (setter: Setter<S>) => void,
 ): Store<S> => {
@@ -142,10 +151,23 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 	};
 
 	if (isStatePrimitive(get())) {
-		return { get, set, subscribe, select: undefined as SelectFn<S> };
+		return {
+			get,
+			getInitial,
+			set,
+			subscribe,
+			select: undefined as SelectFn<S>,
+		};
 	}
 
 	function select<K extends keyof S>(key: K): Store<SelectValue<S, K>> {
+		const getInitialSelected = (): SelectValue<S, K> => {
+			const initialState = getInitial();
+			if (isStatePrimitive(initialState)) {
+				throw new Error(UNEXPECTED_SELECT_ERROR);
+			}
+			return initialState[key];
+		};
 		const getSelected = (): SelectValue<S, K> => {
 			const state = get();
 			if (isStatePrimitive(state)) {
@@ -174,10 +196,16 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 				return { ...stateObj, [key]: next } as S;
 			});
 		};
-		return createStoreApi(getSelected, setSelected);
+		return createStoreApi(getInitialSelected, getSelected, setSelected);
 	}
 
-	return { get, set, subscribe, select: select as SelectFn<S> };
+	return {
+		get,
+		getInitial,
+		set,
+		subscribe,
+		select: select as SelectFn<S>,
+	};
 };
 
 const UNEXPECTED_SELECT_ERROR =

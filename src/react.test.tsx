@@ -18,7 +18,7 @@ describe("useStoreValue", () => {
 			expect(result.current).toBe(5);
 		});
 
-	it("should work with string store", () => {
+		it("should work with string store", () => {
 			const strStore = store("hello");
 			const { result } = renderHook(() => useStoreValue(strStore));
 
@@ -449,7 +449,7 @@ describe("useStoreValue", () => {
 			});
 		});
 
-	it("should handle store with undefined value", () => {
+		it("should handle store with undefined value", () => {
 			const undefinedStore = store(undefined);
 			const { result } = renderHook(() => useStoreValue(undefinedStore));
 

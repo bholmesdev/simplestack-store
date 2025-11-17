@@ -216,6 +216,234 @@ describe("store", () => {
 		});
 	});
 
+	describe("getInitial", () => {
+		describe("primitive stores", () => {
+			it("should return initial value for number store", () => {
+				const numStore = store(42);
+				expect(numStore.getInitial()).toBe(42);
+			});
+
+			it("should return initial value for string store", () => {
+				const strStore = store("hello");
+				expect(strStore.getInitial()).toBe("hello");
+			});
+
+			it("should return initial value for boolean store", () => {
+				const boolStore = store(true);
+				expect(boolStore.getInitial()).toBe(true);
+			});
+
+			it("should return initial value for null store", () => {
+				const nullStore = store(null);
+				expect(nullStore.getInitial()).toBe(null);
+			});
+
+			it("should return initial value for undefined store", () => {
+				const undefinedStore = store(undefined);
+				expect(undefinedStore.getInitial()).toBe(undefined);
+			});
+
+			it("should return initial value even after store is updated", () => {
+				const countStore = store(0);
+				expect(countStore.getInitial()).toBe(0);
+
+				countStore.set(5);
+				expect(countStore.getInitial()).toBe(0);
+				expect(countStore.get()).toBe(5);
+
+				countStore.set(10);
+				expect(countStore.getInitial()).toBe(0);
+				expect(countStore.get()).toBe(10);
+			});
+
+			it("should handle zero as initial value", () => {
+				const zeroStore = store(0);
+				expect(zeroStore.getInitial()).toBe(0);
+			});
+
+			it("should handle empty string as initial value", () => {
+				const emptyStore = store("");
+				expect(emptyStore.getInitial()).toBe("");
+			});
+
+			it("should handle false as initial value", () => {
+				const falseStore = store(false);
+				expect(falseStore.getInitial()).toBe(false);
+			});
+
+			it("should handle NaN as initial value", () => {
+				const nanStore = store(Number.NaN);
+				expect(Number.isNaN(nanStore.getInitial())).toBe(true);
+			});
+		});
+
+		describe("object stores", () => {
+			it("should return initial value for object store", () => {
+				const objStore = store({ name: "Alice", age: 30 });
+				expect(objStore.getInitial()).toEqual({ name: "Alice", age: 30 });
+			});
+
+			it("should return initial value after store is updated", () => {
+				const objStore = store({ name: "Alice", age: 30 });
+				expect(objStore.getInitial()).toEqual({ name: "Alice", age: 30 });
+
+				objStore.set({ name: "Bob", age: 25 });
+				expect(objStore.getInitial()).toEqual({ name: "Alice", age: 30 });
+				expect(objStore.get()).toEqual({ name: "Bob", age: 25 });
+			});
+
+			it("should return initial empty object", () => {
+				const emptyStore = store({});
+				expect(emptyStore.getInitial()).toEqual({});
+			});
+
+			it("should return initial nested object", () => {
+				const nestedStore = store({
+					user: { name: "Alice" },
+					settings: { theme: "dark" },
+				});
+				expect(nestedStore.getInitial()).toEqual({
+					user: { name: "Alice" },
+					settings: { theme: "dark" },
+				});
+			});
+
+			it("should preserve initial object reference", () => {
+				const initialObj = { name: "Alice", age: 30 };
+				const objStore = store(initialObj);
+				objStore.set({ name: "Ben", age: 28 });
+
+				expect(objStore.getInitial()).toBe(initialObj);
+			});
+		});
+
+		describe("array stores", () => {
+			it("should return initial value for array store", () => {
+				const arrStore = store([1, 2, 3]);
+				expect(arrStore.getInitial()).toEqual([1, 2, 3]);
+			});
+
+			it("should return initial value after store is updated", () => {
+				const arrStore = store([1, 2, 3]);
+				expect(arrStore.getInitial()).toEqual([1, 2, 3]);
+
+				arrStore.set([4, 5, 6]);
+				expect(arrStore.getInitial()).toEqual([1, 2, 3]);
+				expect(arrStore.get()).toEqual([4, 5, 6]);
+			});
+
+			it("should return initial empty array", () => {
+				const emptyArr = store([]);
+				expect(emptyArr.getInitial()).toEqual([]);
+			});
+
+			it("should return initial array with mixed types", () => {
+				const mixedArr = store([1, "two", { three: 3 }, null, undefined]);
+				expect(mixedArr.getInitial()).toEqual([
+					1,
+					"two",
+					{ three: 3 },
+					null,
+					undefined,
+				]);
+			});
+
+			it("should preserve initial array reference", () => {
+				const initialArr = [1, 2, 3];
+				const arrStore = store(initialArr);
+				arrStore.set([4, 5, 6]);
+				expect(arrStore.getInitial()).toBe(initialArr);
+			});
+		});
+
+		describe("selected stores", () => {
+			it("should return initial value for selected key", () => {
+				const objStore = store({ name: "Alice", age: 30 });
+				const nameStore = objStore.select("name");
+				expect(nameStore.getInitial()).toBe("Alice");
+			});
+
+			it("should return initial value after selected store is updated", () => {
+				const objStore = store({ name: "Alice", age: 30 });
+				const nameStore = objStore.select("name");
+				expect(nameStore.getInitial()).toBe("Alice");
+
+				nameStore.set("Bob");
+				expect(nameStore.getInitial()).toBe("Alice");
+				expect(nameStore.get()).toBe("Bob");
+			});
+
+			it("should return initial value after parent store is updated", () => {
+				const objStore = store({ name: "Alice", age: 30 });
+				const nameStore = objStore.select("name");
+
+				objStore.set({ name: "Charlie", age: 25 });
+				expect(nameStore.getInitial()).toBe("Alice");
+				expect(nameStore.get()).toBe("Charlie");
+			});
+
+			it("should return initial value for array index selection", () => {
+				const arrStore = store(["a", "b", "c"]);
+				const firstStore = arrStore.select(0);
+				expect(firstStore.getInitial()).toBe("a");
+			});
+
+			it("should return initial value for nested selections", () => {
+				const docStore = store({
+					meta: {
+						tags: ["draft", "internal"],
+					},
+				});
+				const metaStore = docStore.select("meta");
+				const tagsStore = metaStore.select("tags");
+				expect(tagsStore.getInitial()).toEqual(["draft", "internal"]);
+			});
+
+			it("should return initial value for deeply nested selections", () => {
+				const store1 = store({
+					level1: {
+						level2: {
+							level3: {
+								value: 42,
+							},
+						},
+					},
+				});
+
+				const level1 = store1.select("level1");
+				const level2 = level1.select("level2");
+				const level3 = level2.select("level3");
+				const valueStore = level3.select("value");
+
+				expect(valueStore.getInitial()).toBe(42);
+
+				valueStore.set(100);
+				expect(valueStore.getInitial()).toBe(42);
+				expect(valueStore.get()).toBe(100);
+			});
+		});
+
+		describe("edge cases", () => {
+			it("should handle objects with symbol keys", () => {
+				const sym = Symbol("test");
+				const symbolStore = store({ [sym]: "value", normal: "test" });
+				expect(symbolStore.getInitial()[sym]).toBe("value");
+			});
+
+			it("should handle store with special characters in keys", () => {
+				const specialStore = store({ "my-key": "value", "another.key": 123 });
+				const myKeyStore = specialStore.select("my-key");
+				expect(myKeyStore.getInitial()).toBe("value");
+			});
+
+			it("should handle zero as initial value in object", () => {
+				const objWithZero = store({ count: 0 });
+				const countStore = objWithZero.select("count");
+				expect(countStore.getInitial()).toBe(0);
+			});
+		});
+	});
+
 	describe("select", () => {
 		it("should select a key from an object", () => {
 			const objStore = store({ name: "Alice", age: 30 });

@@ -626,4 +626,103 @@ describe("Integration Tests", () => {
 			});
 		});
 	});
+
+	describe("Reset to Initial State Scenario", () => {
+		it("should allow resetting form fields and tracking changes", async () => {
+			const formStore = store({
+				username: "",
+				email: "",
+				bio: "",
+			});
+
+			function FormWithReset() {
+				const form = useStoreValue(formStore);
+				const initial = formStore.getInitial();
+				const hasChanges =
+					form.username !== initial.username ||
+					form.email !== initial.email ||
+					form.bio !== initial.bio;
+
+				return (
+					<div>
+						<input
+							data-testid="username"
+							value={form.username}
+							onChange={(e) =>
+								formStore.set({ ...form, username: e.target.value })
+							}
+						/>
+						<input
+							data-testid="email"
+							value={form.email}
+							onChange={(e) =>
+								formStore.set({ ...form, email: e.target.value })
+							}
+						/>
+						<div data-testid="status">{hasChanges ? "Modified" : "Clean"}</div>
+						<button
+							type="button"
+							data-testid="reset"
+							onClick={() => formStore.set(initial)}
+							disabled={!hasChanges}
+						>
+							Reset
+						</button>
+					</div>
+				);
+			}
+
+			render(<FormWithReset />);
+
+			expect(screen.getByTestId("status")).toHaveTextContent("Clean");
+			expect((screen.getByTestId("reset") as HTMLButtonElement).disabled).toBe(
+				true,
+			);
+
+			act(() => {
+				fireEvent.change(screen.getByTestId("username"), {
+					target: { value: "alice" },
+				});
+			});
+
+			await waitFor(() => {
+				expect(screen.getByTestId("status")).toHaveTextContent("Modified");
+			});
+
+			expect((screen.getByTestId("reset") as HTMLButtonElement).disabled).toBe(
+				false,
+			);
+
+			act(() => {
+				fireEvent.change(screen.getByTestId("email"), {
+					target: { value: "alice@example.com" },
+				});
+			});
+
+			await waitFor(() => {
+				expect(formStore.get()).toEqual({
+					username: "alice",
+					email: "alice@example.com",
+					bio: "",
+				});
+			});
+
+			act(() => {
+				screen.getByTestId("reset").click();
+			});
+
+			await waitFor(() => {
+				expect(screen.getByTestId("status")).toHaveTextContent("Clean");
+			});
+
+			expect(formStore.get()).toEqual({
+				username: "",
+				email: "",
+				bio: "",
+			});
+			expect((screen.getByTestId("reset") as HTMLButtonElement).disabled).toBe(
+				true,
+			);
+		});
+	});
 });

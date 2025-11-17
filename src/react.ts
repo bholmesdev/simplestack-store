@@ -13,9 +13,5 @@ import type { StateObject, StatePrimitive, Store } from "./index.js";
 export function useStoreValue<T extends StateObject | StatePrimitive>(
 	store: Store<T>,
 ) {
-	return useSyncExternalStore(
-		store.subscribe,
-		() => store.get() as T,
-		() => store.get() as T,
-	);
+	return useSyncExternalStore(store.subscribe, store.get, store.getInitial);
 }
