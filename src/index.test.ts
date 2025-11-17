@@ -311,7 +311,7 @@ describe("store", () => {
 			it("should preserve initial object reference", () => {
 				const initialObj = { name: "Alice", age: 30 };
 				const objStore = store(initialObj);
-				objStore.set({ name: 'Ben', age: 28 });
+				objStore.set({ name: "Ben", age: 28 });
 
 				expect(objStore.getInitial()).toBe(initialObj);
 			});
