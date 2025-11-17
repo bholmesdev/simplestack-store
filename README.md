@@ -1,7 +1,7 @@
 # Simple Store
 
 <div>
-    <a href='https://github.com/bholmesdev/simplestack-store/stargazers' rel='nofollow'>
+    <a href='https://github.com/bholmesdev/simplestack-store' rel='nofollow'>
         <img alt='stars' src='https://img.shields.io/github/stars/bholmesdev/simplestack-store?color=blue'>
     </a>
     <a href='https://www.npmjs.com/package/@simplestack/store' rel='nofollow'>
