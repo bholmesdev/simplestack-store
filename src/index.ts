@@ -26,7 +26,13 @@ export type SelectValue<S, K extends keyof S> = S extends readonly (infer U)[] /
 // Make `select` always present but typed as undefined when the state may not be an object
 export type SelectFn<T extends StateObject | StatePrimitive> =
 	T extends StateObject
-		? <K extends keyof T>(key: K) => Store<SelectValue<T, K>>
+		? {
+				<K extends keyof T>(key: K): Store<SelectValue<T, K>>;
+				<R extends StateObject | StatePrimitive>(
+					selector: (state: T) => R,
+					setter: (state: T, value: R) => T,
+				): Store<R>;
+			}
 		: undefined;
 
 export type Store<T extends StateObject | StatePrimitive> = {
@@ -160,7 +166,57 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		};
 	}
 
-	function select<K extends keyof S>(key: K): Store<SelectValue<S, K>> {
+	function select<K extends keyof S>(key: K): Store<SelectValue<S, K>>;
+	function select<R extends StateObject | StatePrimitive>(
+		selector: (state: S) => R,
+		setter: (state: S, value: R) => S,
+	): Store<R>;
+	function select<K extends keyof S, R extends StateObject | StatePrimitive>(
+		keyOrSelector: K | ((state: S) => R),
+		setter?: (state: S, value: R) => S,
+	): Store<SelectValue<S, K> | R> {
+		if (typeof keyOrSelector === "function") {
+			const selector = keyOrSelector as (state: S) => R;
+			if (!setter) {
+				throw new Error(
+					"A setter must be provided when using a function selector.",
+				);
+			}
+			const getInitialSelected = (): R => {
+				const initialState = getInitial();
+				if (isStatePrimitive(initialState)) {
+					throw new Error(UNEXPECTED_SELECT_ERROR);
+				}
+				return selector(initialState);
+			};
+			const getSelected = (): R => {
+				const state = get();
+				if (isStatePrimitive(state)) {
+					throw new Error(UNEXPECTED_SELECT_ERROR);
+				}
+				return selector(state);
+			};
+			const setSelected = (childSetter: Setter<R>) => {
+				set((state) => {
+					if (isStatePrimitive(state)) {
+						throw new Error(UNEXPECTED_SELECT_ERROR);
+					}
+					const current = selector(state);
+					const next =
+						typeof childSetter === "function"
+							? (childSetter as (s: R) => R)(current)
+							: childSetter;
+					return setter(state, next);
+				});
+			};
+			return createStoreApi(
+				getInitialSelected,
+				getSelected,
+				setSelected,
+			) as Store<SelectValue<S, K> | R>;
+		}
+
+		const key = keyOrSelector as K;
 		const getInitialSelected = (): SelectValue<S, K> => {
 			const initialState = getInitial();
 			if (isStatePrimitive(initialState)) {
@@ -196,7 +252,11 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 				return { ...stateObj, [key]: next } as S;
 			});
 		};
-		return createStoreApi(getInitialSelected, getSelected, setSelected);
+		return createStoreApi(
+			getInitialSelected,
+			getSelected,
+			setSelected,
+		) as Store<SelectValue<S, K> | R>;
 	}
 
 	return {

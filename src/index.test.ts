@@ -603,6 +603,55 @@ describe("store", () => {
 			valueStore.set(100);
 			expect(store1.get().level1.level2.level3.value).toBe(100);
 		});
+
+		describe("functional selectors", () => {
+			it("should select using a function and setter", () => {
+				const objStore = store({ name: "Alice", age: 30 });
+				const nameStore = objStore.select(
+					(s) => s.name,
+					(s, v) => ({ ...s, name: v }),
+				);
+
+				expect(nameStore.get()).toBe("Alice");
+			});
+
+			it("should update using the provided setter", () => {
+				const objStore = store({ name: "Alice", age: 30 });
+				const nameStore = objStore.select(
+					(s) => s.name,
+					(s, v) => ({ ...s, name: v }),
+				);
+
+				nameStore.set("Bob");
+				expect(objStore.get()).toEqual({ name: "Bob", age: 30 });
+				expect(nameStore.get()).toBe("Bob");
+			});
+
+			it("should work with complex derived state", () => {
+				const objStore = store({ items: [1, 2, 3] });
+				const firstItemStore = objStore.select(
+					(s) => s.items[0],
+					(s, v) => ({ ...s, items: [v, ...s.items.slice(1)] }),
+				);
+
+				expect(firstItemStore.get()).toBe(1);
+				firstItemStore.set(10);
+				expect(objStore.get().items).toEqual([10, 2, 3]);
+			});
+
+			it("should handle functional updates on the derived store", () => {
+				const objStore = store({ count: 1 });
+				const doubledStore = objStore.select(
+					(s) => s.count * 2,
+					(s, v) => ({ ...s, count: v / 2 }),
+				);
+
+				expect(doubledStore.get()).toBe(2);
+				doubledStore.set((n) => n + 2); // 2 + 2 = 4 -> set 4 -> count = 2
+				expect(objStore.get().count).toBe(2);
+				expect(doubledStore.get()).toBe(4);
+			});
+		});
 	});
 
 	describe("complex scenarios", () => {
