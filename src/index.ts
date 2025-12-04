@@ -23,10 +23,21 @@ export type SelectValue<S, K extends keyof S> = S extends readonly (infer U)[] /
 			? S[K] | undefined
 			: S[K];
 
+export type SelectPathValue<S, P> = S extends null | undefined
+	? undefined
+	: P extends [infer K, ...infer Rest]
+		? K extends keyof S
+			? SelectPathValue<SelectValue<S, K>, Rest>
+			: undefined
+		: S;
+
 // Make `select` always present but typed as undefined when the state may not be an object
 export type SelectFn<T extends StateObject | StatePrimitive> =
 	T extends StateObject
-		? <K extends keyof T>(key: K) => Store<SelectValue<T, K>>
+		? {
+				<K extends keyof T>(key: K): Store<SelectValue<T, K>>;
+				<P extends readonly unknown[]>(path: P): Store<SelectPathValue<T, P>>;
+			}
 		: undefined;
 
 export type Store<T extends StateObject | StatePrimitive> = {
@@ -160,42 +171,77 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		};
 	}
 
-	function select<K extends keyof S>(key: K): Store<SelectValue<S, K>> {
-		const getInitialSelected = (): SelectValue<S, K> => {
-			const initialState = getInitial();
-			if (isStatePrimitive(initialState)) {
-				throw new Error(UNEXPECTED_SELECT_ERROR);
+	function select<K extends keyof S>(
+		keyOrPath: K | unknown[],
+	): Store<SelectValue<S, K> | SelectPathValue<S, unknown[]>> {
+		const path = Array.isArray(keyOrPath) ? keyOrPath : [keyOrPath];
+
+		const getInitialSelected = () => {
+			let current: any = getInitial();
+			for (const key of path) {
+				if (isStatePrimitive(current)) {
+					// If we hit a primitive (null/undefined) in the middle of a path,
+					// we return undefined (safe navigation).
+					// Exception: if the path is length 1 and we are at root,
+					// the original implementation threw error if root was primitive.
+					// But here we are inside `select` which is only available on Object stores.
+					// So initial state should be object.
+					// However, `getInitial()` might return something else if it changed?
+					// No, `getInitial` returns `S`.
+					// If S is Object, `current` starts as Object.
+					// If path has multiple steps, intermediate values can be primitive.
+					return undefined;
+				}
+				current = current[key as keyof typeof current];
 			}
-			return initialState[key];
+			return current;
 		};
-		const getSelected = (): SelectValue<S, K> => {
-			const state = get();
-			if (isStatePrimitive(state)) {
-				throw new Error(UNEXPECTED_SELECT_ERROR);
+
+		const getSelected = () => {
+			let current: any = get();
+			for (const key of path) {
+				if (isStatePrimitive(current)) return undefined;
+				current = current[key as keyof typeof current];
 			}
-			return state[key];
+			return current;
 		};
-		const setSelected = (setter: Setter<SelectValue<S, K>>) => {
+
+		const setSelected = (setter: Setter<any>) => {
 			set((state) => {
-				if (isStatePrimitive(state)) {
-					throw new Error(UNEXPECTED_SELECT_ERROR);
-				}
-				const stateObj: StateObject = state;
-				const prev = stateObj[key];
-				const next =
-					typeof setter === "function"
-						? (setter as (s: SelectValue<S, K>) => SelectValue<S, K>)(prev)
-						: setter;
-				if (Object.is(prev, next)) return state;
-				// Handle arrays separately to preserve array type
-				if (Array.isArray(state)) {
-					const newArray = [...state];
-					newArray[key as number] = next;
-					return newArray as unknown as S;
-				}
-				return { ...stateObj, [key]: next } as S;
+				// Recursive update function
+				const updateDeep = (current: any, keys: unknown[]): any => {
+					if (keys.length === 0) {
+						// Reached the target
+						const prev = current;
+					const next =
+						typeof setter === "function" ? (setter as Function)(prev) : setter;
+						return next;
+					}
+
+					// If we need to traverse deeper but current is primitive, we can't.
+					if (isStatePrimitive(current)) {
+						throw new Error(UNEXPECTED_SELECT_ERROR);
+					}
+
+					const [head, ...tail] = keys;
+					const key = head as keyof typeof current;
+					const prevVal = current[key];
+					const nextVal = updateDeep(prevVal, tail);
+
+					if (Object.is(prevVal, nextVal)) return current;
+
+					if (Array.isArray(current)) {
+						const newArray = [...current];
+						newArray[key as any] = nextVal;
+						return newArray;
+					}
+					return { ...current, [key]: nextVal };
+				};
+
+				return updateDeep(state, path);
 			});
 		};
+
 		return createStoreApi(getInitialSelected, getSelected, setSelected);
 	}
 

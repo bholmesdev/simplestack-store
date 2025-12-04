@@ -605,6 +605,111 @@ describe("store", () => {
 		});
 	});
 
+	describe("array path selection", () => {
+		it("should select nested property using array syntax", () => {
+			const store1 = store({
+				user: {
+					name: "Alice",
+					address: {
+						city: "Wonderland",
+					},
+				},
+			});
+
+			const cityStore = store1.select(["user", "address", "city"]);
+			expect(cityStore.get()).toBe("Wonderland");
+		});
+
+		it("should update nested property using array syntax", () => {
+			const store1 = store({
+				user: {
+					name: "Alice",
+					address: {
+						city: "Wonderland",
+					},
+				},
+			});
+
+			const cityStore = store1.select(["user", "address", "city"]);
+			cityStore.set("Oz");
+
+			expect(cityStore.get()).toBe("Oz");
+			expect(store1.get().user.address.city).toBe("Oz");
+		});
+
+		it("should handle array indices in path", () => {
+			const store1 = store({
+				users: [
+					{ name: "Alice" },
+					{ name: "Bob" },
+				],
+			});
+
+			const bobNameStore = store1.select(["users", 1, "name"]);
+			expect(bobNameStore.get()).toBe("Bob");
+
+			bobNameStore.set("Robert");
+			expect(store1.get().users[1].name).toBe("Robert");
+		});
+
+		it("should return undefined safely if path is broken (get)", () => {
+			const store1 = store({
+				user: undefined as { name: string } | undefined,
+			});
+
+			const nameStore = store1.select(["user", "name"]);
+			expect(nameStore.get()).toBeUndefined();
+			
+			// Confirm that setting on a broken path throws (cannot auto-create missing parents)
+			expect(() => nameStore.set("Bob")).toThrow();
+		});
+
+		it("should return undefined safely if path becomes broken", () => {
+			const store1 = store({
+				user: { name: "Alice" } as { name: string } | undefined,
+			});
+
+			const nameStore = store1.select(["user", "name"]);
+			expect(nameStore.get()).toBe("Alice");
+
+			store1.set({ user: undefined });
+			expect(nameStore.get()).toBeUndefined();
+		});
+
+		it("should throw error when setting deep property on missing parent", () => {
+			const store1 = store({
+				user: undefined as { name: string } | undefined,
+			});
+
+			const nameStore = store1.select(["user", "name"]);
+			expect(() => nameStore.set("Bob")).toThrow();
+		});
+        
+        it("should respect immutability on deep updates", () => {
+            const store1 = store({
+                a: {
+                    b: {
+                        c: 1
+                    },
+                    d: 2
+                }
+            });
+            
+            const cStore = store1.select(['a', 'b', 'c']);
+            const originalState = store1.get();
+            const originalA = originalState.a;
+            const originalB = originalState.a.b;
+            
+            cStore.set(2);
+            
+            const newState = store1.get();
+            expect(newState).not.toBe(originalState);
+            expect(newState.a).not.toBe(originalA);
+            expect(newState.a.b).not.toBe(originalB);
+            expect(newState.a.d).toBe(originalState.a.d); // Sibling should be preserved
+        });
+	});
+
 	describe("complex scenarios", () => {
 		it("should handle the document store example from README", () => {
 			const documentStore = store({
