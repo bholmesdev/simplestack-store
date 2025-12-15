@@ -44,6 +44,7 @@
 		"@testing-library/react": "^16.3.0",
 		"@types/react": "^19.2.2",
 		"@types/react-dom": "^19.2.2",
+		"@types/use-sync-external-store": "^1.5.0",
 		"@vitest/ui": "^4.0.6",
 		"happy-dom": "^20.0.10",
 		"react": "^19.2.0",
@@ -52,10 +53,11 @@
 		"vitest": "^4.0.6"
 	},
 	"dependencies": {
-		"signal-polyfill": "^0.2.2"
+		"signal-polyfill": "^0.2.2",
+		"use-sync-external-store": "^1.6.0"
 	},
 	"peerDependencies": {
-		"react": "^18.0.0 || ^19.0.0"
+		"react": "^17.0.0 || ^18.0.0 || ^19.0.0"
 	},
 	"peerDependenciesMeta": {
 		"react": {

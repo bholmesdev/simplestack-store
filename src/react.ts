@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "use-sync-external-store/shim";
 import type { StateObject, StatePrimitive, Store } from "./index.js";
 
 /**
