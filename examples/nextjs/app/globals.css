@@ -1,0 +1,53 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 1rem;
+}
+
+.counter {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.count {
+  font-size: 2rem;
+  font-weight: bold;
+  min-width: 3rem;
+  text-align: center;
+}
+
+button {
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: #333;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #444;
+}

@@ -48,3 +48,6 @@ Thumbs.db
 package-lock.json
 yarn.lock
 
+# Examples lockfiles
+examples/**/pnpm-lock.yaml
+
