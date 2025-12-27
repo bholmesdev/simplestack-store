@@ -52,6 +52,7 @@
 		"vitest": "^4.0.6"
 	},
 	"dependencies": {
+		"esm-env": "^1.2.2",
 		"signal-polyfill": "^0.2.2"
 	},
 	"peerDependencies": {
