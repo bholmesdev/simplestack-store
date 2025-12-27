@@ -10,6 +10,10 @@ We're open to feature requests of all kinds. If you have an idea for what you wa
 
 **⚠️ We strongly discourage PRs for undiscussed feature requests.** If you have an idea for a new feature, please start by opening a GitHub issue so we can discuss the API design together. I'm very open to new suggestions, but I would hate to have contributors spend time on high-quality PR for an API design that we don't agree on.
 
+## Docs contributions
+
+Documentation for usage examples and our API reference lives on simple-stack.dev. This is tracked in the [simple-stack repository](https://github.com/bholmesdev/simple-stack) under `www/`. Please open pull requests there for any documentation changes, and link to your documentation PR from any relevant PRs in `simplestack-store`.
+
 ## Setup Guide
 
 ### Prerequisites
