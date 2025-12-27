@@ -43,7 +43,7 @@ This project uses [Vitest](https://vitest.dev/) as its testing framework. You ca
 ```bash
 # To run unit tests
 pnpm run test
-# To run React renderer tests
+# To run unit tests with browser overview for test results
 pnpm run test:ui
 ```
 

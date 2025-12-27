@@ -33,6 +33,3 @@ jobs:
 
       - name: Run tests
         run: pnpm run test
-
-      - name: Run UI tests
-        run: pnpm run test:ui
