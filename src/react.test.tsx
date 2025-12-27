@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import { act } from "react";
 import { store } from "./index.js";
-import { useStoreValue } from "./react.js";
+import { useShallow, useStoreValue } from "./react.js";
 
 describe("useStoreValue", () => {
 	describe("basic usage", () => {
@@ -517,6 +517,242 @@ describe("useStoreValue", () => {
 
 			await waitFor(() => {
 				expect(renderSpy.mock.calls.length).toBe(initialRenderCount + 1);
+			});
+		});
+	});
+
+	describe("selector", () => {
+		it("should select a value from the store", () => {
+			const objStore = store({ name: "Alice", age: 30 });
+			const { result } = renderHook(() =>
+				useStoreValue(objStore, (s) => s.name),
+			);
+
+			expect(result.current).toBe("Alice");
+		});
+
+		it("should update when selected value changes", async () => {
+			const objStore = store({ name: "Alice", age: 30 });
+			const { result } = renderHook(() =>
+				useStoreValue(objStore, (s) => s.name),
+			);
+
+			expect(result.current).toBe("Alice");
+
+			act(() => {
+				objStore.set({ name: "Bob", age: 30 });
+			});
+
+			await waitFor(() => {
+				expect(result.current).toBe("Bob");
+			});
+		});
+
+		it("should not re-render when non-selected value changes", async () => {
+			const objStore = store({ name: "Alice", age: 30 });
+			const renderSpy = vi.fn();
+
+			function NameComponent() {
+				const name = useStoreValue(objStore, (s) => s.name);
+				renderSpy();
+				return <div>{name}</div>;
+			}
+
+			render(<NameComponent />);
+			const initialRenderCount = renderSpy.mock.calls.length;
+
+			// Change 'age', which the component doesn't select
+			act(() => {
+				objStore.set({ name: "Alice", age: 31 });
+			});
+
+			// Should not have re-rendered
+			expect(renderSpy.mock.calls.length).toBe(initialRenderCount);
+		});
+
+		it("should select computed values", async () => {
+			const objStore = store({ items: [1, 2, 3] });
+			const { result } = renderHook(() =>
+				useStoreValue(objStore, (s) => s.items.length),
+			);
+
+			expect(result.current).toBe(3);
+
+			act(() => {
+				objStore.set({ items: [1, 2, 3, 4] });
+			});
+
+			await waitFor(() => {
+				expect(result.current).toBe(4);
+			});
+		});
+
+		it("should work with nested property access", async () => {
+			const objStore = store({
+				user: { profile: { name: "Alice" } },
+			});
+			const { result } = renderHook(() =>
+				useStoreValue(objStore, (s) => s.user.profile.name),
+			);
+
+			expect(result.current).toBe("Alice");
+
+			act(() => {
+				objStore.set({ user: { profile: { name: "Bob" } } });
+			});
+
+			await waitFor(() => {
+				expect(result.current).toBe("Bob");
+			});
+		});
+
+		it("should re-evaluate conditional selector when dependency changes", async () => {
+			const idStore = store(0);
+			const noteStore = store({ id: 5, title: "Story" });
+
+			function ConditionalComponent() {
+				const id = useStoreValue(idStore);
+				const title = useStoreValue(noteStore, (value) => {
+					if (id === value.id) {
+						return value.title;
+					}
+				});
+
+				return (
+					<div>
+						<span data-testid="result">{title ?? "undefined"}</span>
+						<button
+							type="button"
+							data-testid="increment"
+							onClick={() => idStore.set((n) => n + 1)}
+						>
+							Increment
+						</button>
+					</div>
+				);
+			}
+
+			render(<ConditionalComponent />);
+
+			// Initially id=0, note.id=5, so no match
+			expect(screen.getByTestId("result")).toHaveTextContent("undefined");
+
+			// Click 5 times to get id to 5
+			for (let i = 0; i < 5; i++) {
+				act(() => {
+					fireEvent.click(screen.getByTestId("increment"));
+				});
+			}
+
+			await waitFor(() => {
+				expect(screen.getByTestId("result")).toHaveTextContent("Story");
+			});
+		});
+	});
+
+	describe("useShallow", () => {
+		it("should return stable reference for shallowly equal arrays", async () => {
+			const objStore = store({ items: [1, 2, 3], other: "a" });
+			const references: unknown[] = [];
+
+			function ItemsComponent() {
+				const items = useStoreValue(
+					objStore,
+					useShallow((s) => [...s.items]),
+				);
+				references.push(items);
+				return <div>{items.join(",")}</div>;
+			}
+
+			render(<ItemsComponent />);
+
+			// Change 'other', items stay the same
+			act(() => {
+				objStore.set({ items: [1, 2, 3], other: "b" });
+			});
+
+			await waitFor(() => {
+				// Should have same reference since items are shallowly equal
+				expect(references[0]).toBe(references[references.length - 1]);
+			});
+		});
+
+		it("should return stable reference for shallowly equal objects", async () => {
+			const objStore = store({ a: 1, b: 2, other: "x" });
+			const references: unknown[] = [];
+
+			function ObjComponent() {
+				const obj = useStoreValue(
+					objStore,
+					useShallow((s) => ({ a: s.a, b: s.b })),
+				);
+				references.push(obj);
+				return <div>{JSON.stringify(obj)}</div>;
+			}
+
+			render(<ObjComponent />);
+
+			// Change 'other', a and b stay the same
+			act(() => {
+				objStore.set({ a: 1, b: 2, other: "y" });
+			});
+
+			await waitFor(() => {
+				expect(references[0]).toBe(references[references.length - 1]);
+			});
+		});
+
+		it("should return new reference when values actually change", async () => {
+			const objStore = store({ items: [1, 2, 3] });
+			const references: unknown[] = [];
+
+			function ItemsComponent() {
+				const items = useStoreValue(
+					objStore,
+					useShallow((s) => [...s.items]),
+				);
+				references.push(items);
+				return <div>{items.join(",")}</div>;
+			}
+
+			render(<ItemsComponent />);
+			const firstRef = references[0];
+
+			// Actually change items
+			act(() => {
+				objStore.set({ items: [1, 2, 3, 4] });
+			});
+
+			await waitFor(() => {
+				expect(references[references.length - 1]).not.toBe(firstRef);
+			});
+		});
+
+		it("should work with Object.keys/values patterns", async () => {
+			const objStore = store({
+				items: { a: 1, b: 2 },
+				count: 0,
+			});
+			const references: unknown[] = [];
+
+			function KeysComponent() {
+				const keys = useStoreValue(
+					objStore,
+					useShallow((s) => Object.keys(s.items)),
+				);
+				references.push(keys);
+				return <div>{keys.join(",")}</div>;
+			}
+
+			render(<KeysComponent />);
+
+			// Change count, keys stay the same
+			act(() => {
+				objStore.set({ items: { a: 1, b: 2 }, count: 1 });
+			});
+
+			await waitFor(() => {
+				expect(references[0]).toBe(references[references.length - 1]);
 			});
 		});
 	});
