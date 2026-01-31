@@ -235,6 +235,13 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 				}
 
 				const lastKey = path[path.length - 1];
+				if (
+					!Array.isArray(current) &&
+					!Object.prototype.hasOwnProperty.call(current, lastKey)
+				) {
+					warnDiscardedSet(path);
+					return state;
+				}
 				const prev = current[lastKey as keyof typeof current];
 				const next =
 					typeof setter === "function"
