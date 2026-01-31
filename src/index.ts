@@ -29,11 +29,13 @@ type NonNullableState<T> = T extends null | undefined ? never : T;
 
 type SelectPath<T> = T extends StateObject
 	? {
-			[K in keyof Required<T>]: [K] | (SelectPath<NonNullableState<SelectValue<T, K>>> extends infer P
-				? P extends readonly any[]
-					? [K, ...P]
-					: [K]
-				: [K]);
+			[K in keyof Required<T>]:
+				| [K]
+				| (SelectPath<NonNullableState<SelectValue<T, K>>> extends infer P
+						? P extends readonly any[]
+							? [K, ...P]
+							: [K]
+						: [K]);
 		}[keyof Required<T>]
 	: never;
 
@@ -43,7 +45,10 @@ type SelectPathValue<T, P extends readonly PropertyKey[]> = T extends
 	? undefined
 	: P extends [infer K, ...infer Rest]
 		? K extends keyof T
-			? SelectPathValue<SelectValue<T, K>, Rest extends readonly PropertyKey[] ? Rest : []>
+			? SelectPathValue<
+					SelectValue<T, K>,
+					Rest extends readonly PropertyKey[] ? Rest : []
+				>
 			: undefined
 		: T;
 
@@ -179,7 +184,9 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 	const warnDiscardedSet = (path: readonly PropertyKey[]) => {
 		if (!DEV) return;
 		const formatted = path
-			.map((key) => (typeof key === "string" ? JSON.stringify(key) : String(key)))
+			.map((key) =>
+				typeof key === "string" ? JSON.stringify(key) : String(key),
+			)
 			.join(", ");
 		console.warn(
 			"[@simplestack/store] set() was discarded because a select() path crossed a potentially undefined value:\n" +
@@ -235,17 +242,16 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 				}
 
 				const lastKey = path[path.length - 1];
-				if (
-					!Array.isArray(current) &&
-					!Object.prototype.hasOwnProperty.call(current, lastKey)
-				) {
+				if (!Array.isArray(current) && !Object.hasOwn(current, lastKey)) {
 					warnDiscardedSet(path);
 					return state;
 				}
 				const prev = current[lastKey as keyof typeof current];
 				const next =
 					typeof setter === "function"
-						? (setter as (s: SelectPathValue<S, P>) => SelectPathValue<S, P>)(prev)
+						? (setter as (s: SelectPathValue<S, P>) => SelectPathValue<S, P>)(
+								prev,
+							)
 						: setter;
 
 				if (Object.is(prev, next)) return state;

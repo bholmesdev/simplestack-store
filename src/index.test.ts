@@ -1,5 +1,5 @@
 import { DEV } from "esm-env";
-import { store, type Store } from "./index.js";
+import { type Store, store } from "./index.js";
 import { nextTick } from "./test-utils.js";
 
 describe("store", () => {
