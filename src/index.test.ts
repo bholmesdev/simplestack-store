@@ -622,18 +622,29 @@ describe("store", () => {
 
 		it("should discard sets that cross a potentially undefined value", () => {
 			const documentStore = store({
-				notes: [{ title: "Example" }],
+				note: undefined as { title: string } | undefined,
 			});
-			const titleStore = documentStore.select("notes", 0, "title");
+			const titleStore = documentStore.select("note", "title");
 			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
 			titleStore.set("New title");
 
-			expect(documentStore.get().notes[0].title).toBe("Example");
+			expect(documentStore.get().note).toBeUndefined();
 			if (DEV) {
 				expect(warn).toHaveBeenCalled();
 			}
 			warn.mockRestore();
+		});
+
+		it("should allow setting when optional object exists at runtime", () => {
+			const documentStore = store({
+				note: { title: "Example" } as { title: string } | undefined,
+			});
+			const titleStore = documentStore.select("note", "title");
+
+			titleStore.set("Updated");
+
+			expect(documentStore.get().note?.title).toBe("Updated");
 		});
 
 		it("should allow setting the value at a potentially undefined leaf", () => {
@@ -646,6 +657,33 @@ describe("store", () => {
 			firstNote.set({ title: "Updated" });
 
 			expect(documentStore.get().notes[0].title).toBe("Updated");
+		});
+
+		it("should allow setting when array indices in the middle exist at runtime", () => {
+			const matrixStore = store({
+				groups: [[{ title: "A" }]],
+			});
+			const titleStore = matrixStore.select("groups", 0, 0, "title");
+
+			titleStore.set("B");
+
+			expect(matrixStore.get().groups[0][0].title).toBe("B");
+		});
+
+		it("should discard sets when array index is missing at runtime", () => {
+			const documentStore = store({
+				notes: [] as { title: string }[],
+			});
+			const titleStore = documentStore.select("notes", 0, "title");
+			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+			titleStore.set("New title");
+
+			expect(documentStore.get().notes[0]).toBeUndefined();
+			if (DEV) {
+				expect(warn).toHaveBeenCalled();
+			}
+			warn.mockRestore();
 		});
 	});
 

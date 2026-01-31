@@ -224,10 +224,6 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 						warnDiscardedSet(path);
 						return state;
 					}
-					if (Array.isArray(current) && typeof key === "number") {
-						warnDiscardedSet(path);
-						return state;
-					}
 					parents.push(current);
 					keys.push(key);
 					current = current[key as keyof typeof current];
