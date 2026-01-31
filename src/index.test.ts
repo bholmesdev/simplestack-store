@@ -1,4 +1,5 @@
-import { store } from "./index.js";
+import { DEV } from "esm-env";
+import { store, type Store } from "./index.js";
 import { nextTick } from "./test-utils.js";
 
 describe("store", () => {
@@ -602,6 +603,49 @@ describe("store", () => {
 
 			valueStore.set(100);
 			expect(store1.get().level1.level2.level3.value).toBe(100);
+		});
+
+		it("should support variadic select paths with undefined propagation", () => {
+			const documentStore = store({
+				notes: [{ title: "Example" }],
+			});
+
+			const titleStore: Store<string | undefined> = documentStore.select(
+				"notes",
+				0,
+				"title",
+			);
+			void titleStore;
+
+			expect(titleStore.get()).toBe("Example");
+		});
+
+		it("should discard sets that cross a potentially undefined value", () => {
+			const documentStore = store({
+				notes: [{ title: "Example" }],
+			});
+			const titleStore = documentStore.select("notes", 0, "title");
+			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+			titleStore.set("New title");
+
+			expect(documentStore.get().notes[0].title).toBe("Example");
+			if (DEV) {
+				expect(warn).toHaveBeenCalled();
+			}
+			warn.mockRestore();
+		});
+
+		it("should allow setting the value at a potentially undefined leaf", () => {
+			const documentStore = store({
+				notes: [{ title: "Example" }],
+			});
+
+			const firstNote: Store<{ title: string } | undefined> =
+				documentStore.select("notes", 0);
+			firstNote.set({ title: "Updated" });
+
+			expect(documentStore.get().notes[0].title).toBe("Updated");
 		});
 	});
 

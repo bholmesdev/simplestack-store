@@ -5,6 +5,15 @@ import { useStoreValue } from "@simplestack/store/react";
 
 const countStore = store(0);
 
+const documentStore = store({
+  title: "Untitled",
+  authors: ["Ada", "Ben"],
+  meta: {
+    pages: 3,
+    tags: [{name: "draft", color: "red"}, {name: "internal", color: "blue"}],
+  },
+});
+
 function Counter() {
   const count = useStoreValue(countStore);
 
