@@ -1,3 +1,4 @@
+import { DEV } from "esm-env";
 import { Signal } from "signal-polyfill";
 
 export type StateObject = Record<string | number | symbol, any>;
@@ -24,9 +25,38 @@ export type SelectValue<S, K extends keyof S> = S extends readonly (infer U)[] /
 			: S[K];
 
 // Make `select` always present but typed as undefined when the state may not be an object
+type NonNullableState<T> = T extends null | undefined ? never : T;
+
+type SelectPath<T> = T extends StateObject
+	? {
+			[K in keyof Required<T>]:
+				| [K]
+				| (SelectPath<NonNullableState<SelectValue<T, K>>> extends infer P
+						? P extends readonly any[]
+							? [K, ...P]
+							: [K]
+						: [K]);
+		}[keyof Required<T>]
+	: never;
+
+type SelectPathValue<T, P extends readonly PropertyKey[]> = T extends
+	| null
+	| undefined
+	? undefined
+	: P extends [infer K, ...infer Rest]
+		? K extends keyof T
+			? SelectPathValue<
+					SelectValue<T, K>,
+					Rest extends readonly PropertyKey[] ? Rest : []
+				>
+			: undefined
+		: T;
+
 export type SelectFn<T extends StateObject | StatePrimitive> =
-	T extends StateObject
-		? <K extends keyof T>(key: K) => Store<SelectValue<T, K>>
+	NonNullableState<T> extends StateObject
+		? <P extends SelectPath<NonNullableState<T>>>(
+				...path: P
+			) => Store<SelectPathValue<T, P>>
 		: undefined;
 
 export type Store<T extends StateObject | StatePrimitive> = {
@@ -135,6 +165,7 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 	getInitial: () => S,
 	get: () => S,
 	set: (setter: Setter<S>) => void,
+	options?: { selectable?: boolean },
 ): Store<S> => {
 	const subscribe = (callback: (state: S) => void) => {
 		// Track the previous value to avoid unnecessary updates when effects are triggered.
@@ -150,7 +181,30 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		});
 	};
 
-	if (isStatePrimitive(get())) {
+	const warnDiscardedSet = (path: readonly PropertyKey[]) => {
+		if (!DEV) return;
+		const formatted = path
+			.map((key) =>
+				typeof key === "string" ? JSON.stringify(key) : String(key),
+			)
+			.join(", ");
+		console.warn(
+			"[@simplestack/store] set() was discarded because a select() path crossed a potentially undefined value:\n" +
+				`select(${formatted})`,
+		);
+	};
+
+	const getAtPath = (state: S, path: readonly PropertyKey[]) => {
+		let current: any = state;
+		for (const key of path) {
+			if (isStatePrimitive(current)) return undefined;
+			current = current[key as keyof typeof current];
+		}
+		return current as any;
+	};
+
+	const canSelect = options?.selectable ?? !isStatePrimitive(get());
+	if (!canSelect) {
 		return {
 			get,
 			getInitial,
@@ -160,43 +214,69 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		};
 	}
 
-	function select<K extends keyof S>(key: K): Store<SelectValue<S, K>> {
-		const getInitialSelected = (): SelectValue<S, K> => {
-			const initialState = getInitial();
-			if (isStatePrimitive(initialState)) {
-				throw new Error(UNEXPECTED_SELECT_ERROR);
-			}
-			return initialState[key];
-		};
-		const getSelected = (): SelectValue<S, K> => {
-			const state = get();
-			if (isStatePrimitive(state)) {
-				throw new Error(UNEXPECTED_SELECT_ERROR);
-			}
-			return state[key];
-		};
-		const setSelected = (setter: Setter<SelectValue<S, K>>) => {
+	function select<P extends SelectPath<NonNullableState<S>>>(
+		...path: P
+	): Store<SelectPathValue<S, P>> {
+		const getInitialSelected = () => getAtPath(getInitial(), path);
+		const getSelected = () => getAtPath(get(), path);
+		const setSelected = (setter: Setter<SelectPathValue<S, P>>) => {
 			set((state) => {
-				if (isStatePrimitive(state)) {
-					throw new Error(UNEXPECTED_SELECT_ERROR);
+				let current: any = state;
+				const parents: any[] = [];
+				const keys: PropertyKey[] = [];
+
+				for (let i = 0; i < path.length - 1; i++) {
+					const key = path[i];
+					if (isStatePrimitive(current)) {
+						warnDiscardedSet(path);
+						return state;
+					}
+					parents.push(current);
+					keys.push(key);
+					current = current[key as keyof typeof current];
 				}
-				const stateObj: StateObject = state;
-				const prev = stateObj[key];
+
+				if (isStatePrimitive(current)) {
+					warnDiscardedSet(path);
+					return state;
+				}
+
+				const lastKey = path[path.length - 1];
+				if (!Array.isArray(current) && !Object.hasOwn(current, lastKey)) {
+					warnDiscardedSet(path);
+					return state;
+				}
+				const prev = current[lastKey as keyof typeof current];
 				const next =
 					typeof setter === "function"
-						? (setter as (s: SelectValue<S, K>) => SelectValue<S, K>)(prev)
+						? (setter as (s: SelectPathValue<S, P>) => SelectPathValue<S, P>)(
+								prev,
+							)
 						: setter;
+
 				if (Object.is(prev, next)) return state;
-				// Handle arrays separately to preserve array type
-				if (Array.isArray(state)) {
-					const newArray = [...state];
-					newArray[key as number] = next;
-					return newArray as unknown as S;
+
+				let updated: any = Array.isArray(current)
+					? [...current]
+					: { ...(current as StateObject) };
+				updated[lastKey as keyof typeof updated] = next;
+
+				for (let i = parents.length - 1; i >= 0; i--) {
+					const parent = parents[i];
+					const key = keys[i];
+					const cloned: any = Array.isArray(parent)
+						? [...parent]
+						: { ...(parent as StateObject) };
+					cloned[key as any] = updated;
+					updated = cloned;
 				}
-				return { ...stateObj, [key]: next } as S;
+
+				return updated as S;
 			});
 		};
-		return createStoreApi(getInitialSelected, getSelected, setSelected);
+		return createStoreApi(getInitialSelected, getSelected, setSelected, {
+			selectable: true,
+		});
 	}
 
 	return {
@@ -207,9 +287,6 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		select: select as SelectFn<S>,
 	};
 };
-
-const UNEXPECTED_SELECT_ERROR =
-	"Internal: select() was unexpectedly called on a state value that wasn't an object.";
 
 function isStatePrimitive(state: unknown): state is StatePrimitive {
 	return (

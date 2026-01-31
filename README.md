@@ -46,7 +46,7 @@ function Document() {
 
 // Or, select parts of a store to listen to individually
 const titleStore = documentStore.select("title");
-const tagsStore = documentStore.select("meta").select("tags");
+const tagsStore = documentStore.select("meta", "tags");
 
 function Title() {
   // And scope updates with selected stores for fine-grained control

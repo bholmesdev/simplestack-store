@@ -1,4 +1,5 @@
-import { store } from "./index.js";
+import { DEV } from "esm-env";
+import { type Store, store } from "./index.js";
 import { nextTick } from "./test-utils.js";
 
 describe("store", () => {
@@ -602,6 +603,178 @@ describe("store", () => {
 
 			valueStore.set(100);
 			expect(store1.get().level1.level2.level3.value).toBe(100);
+		});
+
+		it("should support variadic select paths with undefined propagation", () => {
+			const documentStore = store({
+				notes: [{ title: "Example" }],
+			});
+
+			const titleStore: Store<string | undefined> = documentStore.select(
+				"notes",
+				0,
+				"title",
+			);
+			void titleStore;
+
+			expect(titleStore.get()).toBe("Example");
+		});
+
+		it("should discard sets that cross a potentially undefined value", () => {
+			const documentStore = store<{ note?: { title: string } }>({
+				note: undefined as { title: string } | undefined,
+			});
+			const titleStore: Store<string | undefined> = documentStore.select(
+				"note",
+				"title",
+			);
+			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+			titleStore.set("New title");
+
+			expect(documentStore.get().note).toBeUndefined();
+			if (DEV) {
+				expect(warn).toHaveBeenCalled();
+			}
+			warn.mockRestore();
+		});
+
+		it("should allow setting when optional object exists at runtime", () => {
+			const documentStore = store({
+				note: { title: "Example" } as { title: string } | undefined,
+			});
+			const titleStore = documentStore.select("note", "title");
+
+			titleStore.set("Updated");
+
+			expect(documentStore.get().note?.title).toBe("Updated");
+		});
+
+		it("should allow setting the value at a potentially undefined leaf", () => {
+			const documentStore = store({
+				notes: [{ title: "Example" }],
+			});
+
+			const firstNote: Store<{ title: string } | undefined> =
+				documentStore.select("notes", 0);
+			firstNote.set({ title: "Updated" });
+
+			expect(documentStore.get().notes[0].title).toBe("Updated");
+		});
+
+		it("should allow setting when array indices in the middle exist at runtime", () => {
+			const matrixStore = store({
+				groups: [[{ title: "A" }]],
+			});
+			const titleStore = matrixStore.select("groups", 0, 0, "title");
+
+			titleStore.set("B");
+
+			expect(matrixStore.get().groups[0][0].title).toBe("B");
+		});
+
+		it("should discard sets when array index is missing at runtime", () => {
+			const documentStore = store({
+				notes: [] as { title: string }[],
+			});
+			const titleStore = documentStore.select("notes", 0, "title");
+			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+			titleStore.set("New title");
+
+			expect(documentStore.get().notes[0]).toBeUndefined();
+			if (DEV) {
+				expect(warn).toHaveBeenCalled();
+			}
+			warn.mockRestore();
+		});
+
+		it("should handle unions in the middle of a path", () => {
+			const unionStore = store<{ node: { a: string } | { b: number } }>({
+				node: { a: "x" },
+			});
+			const aStore: Store<string | undefined> = unionStore.select("node", "a");
+			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+			aStore.set("y");
+			expect(unionStore.get().node).toEqual({ a: "y" });
+			if (DEV) {
+				expect(warn).not.toHaveBeenCalled();
+			}
+			warn.mockClear();
+
+			unionStore.set({ node: { b: 1 } });
+			aStore.set("z");
+
+			expect(unionStore.get().node).toEqual({ b: 1 });
+			if (DEV) {
+				expect(warn).toHaveBeenCalled();
+			}
+			warn.mockRestore();
+		});
+
+		it("should handle index signatures with missing keys", () => {
+			const recordStore = store<Record<string, { title: string }>>({});
+			const titleStore: Store<string | undefined> = recordStore.select(
+				"missing",
+				"title",
+			);
+			const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+			titleStore.set("New title");
+
+			expect(recordStore.get().missing).toBeUndefined();
+			if (DEV) {
+				expect(warn).toHaveBeenCalled();
+			}
+			warn.mockRestore();
+		});
+
+		it("should handle deep select chains", () => {
+			const deepStore = store({
+				level1: {
+					level2: {
+						level3: {
+							level4: {
+								level5: {
+									level6: {
+										level7: {
+											value: "ok",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			});
+
+			const valueStore = deepStore.select(
+				"level1",
+				"level2",
+				"level3",
+				"level4",
+				"level5",
+				"level6",
+				"level7",
+				"value",
+			);
+
+			expect(valueStore.get()).toBe("ok");
+			valueStore.set("updated");
+			expect(
+				deepStore.get().level1.level2.level3.level4.level5.level6.level7.value,
+			).toBe("updated");
+		});
+
+		it("should handle symbol keys in paths", () => {
+			const key = Symbol("note");
+			const symbolStore = store({ [key]: { title: "x" } });
+			const titleStore = symbolStore.select(key, "title");
+
+			titleStore.set("y");
+
+			expect(symbolStore.get()[key].title).toBe("y");
 		});
 	});
 
