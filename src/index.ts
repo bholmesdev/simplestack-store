@@ -54,9 +54,14 @@ type SelectPathValue<T, P extends readonly PropertyKey[]> = T extends
 
 export type SelectFn<T extends StateObject | StatePrimitive> =
 	NonNullableState<T> extends StateObject
-		? <P extends SelectPath<NonNullableState<T>>>(
-				...path: P
-			) => Store<SelectPathValue<T, P>>
+		? {
+				<P extends SelectPath<NonNullableState<T>>>(
+					...path: P
+				): Store<SelectPathValue<T, P>>;
+				<P extends SelectPath<NonNullableState<T>>>(
+					...pathAndOptions: [...P, StoreOptions<SelectPathValue<T, P>>]
+				): Store<SelectPathValue<T, P>>;
+			}
 		: undefined;
 
 export type Store<T extends StateObject | StatePrimitive> = {
@@ -120,7 +125,7 @@ export type Store<T extends StateObject | StatePrimitive> = {
 	/**
 	 * Optional cleanup for middleware init hooks.
 	 */
-	destroy?: () => void;
+	destroy: () => void;
 };
 
 export type StoreMiddleware<T extends StateObject | StatePrimitive> = (
@@ -239,11 +244,30 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		set: (setter: Setter<S>) => set(setter),
 		subscribe,
 		select: undefined as SelectFn<S>,
+		destroy: () => {},
 	};
 
 	function select<P extends SelectPath<NonNullableState<S>>>(
 		...path: P
+	): Store<SelectPathValue<S, P>>;
+	function select<P extends SelectPath<NonNullableState<S>>>(
+		...pathAndOptions: [...P, StoreOptions<SelectPathValue<S, P>>]
+	): Store<SelectPathValue<S, P>>;
+	function select<P extends SelectPath<NonNullableState<S>>>(
+		...pathAndOptions:
+			| P
+			| [...P, StoreOptions<SelectPathValue<S, P>>]
 	): Store<SelectPathValue<S, P>> {
+      // Since select accepts variadic arguments, we need to check
+      // if the last argument matches the StoreOptions signature. 
+		const maybeOptions = pathAndOptions[pathAndOptions.length - 1];
+		const hasOptions = isSelectOptions(maybeOptions);
+		const path = (
+			hasOptions ? pathAndOptions.slice(0, -1) : pathAndOptions
+		) as P;
+		const selectOptions = hasOptions
+			? (maybeOptions as StoreOptions<SelectPathValue<S, P>>)
+			: undefined;
 		const getInitialSelected = () => getAtPath(getInitial(), path);
 		const getSelected = () => getAtPath(get(), path);
 		const setSelected = (setter: Setter<SelectPathValue<S, P>>) => {
@@ -303,6 +327,7 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		};
 		return createStoreApi(getInitialSelected, getSelected, setSelected, {
 			selectable: true,
+			middleware: selectOptions?.middleware,
 		});
 	}
 
@@ -341,6 +366,11 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 	}
 
 	return storeApi;
+};
+
+const isSelectOptions = (value: unknown): value is StoreOptions<any> => {
+	const type = typeof value;
+	return type !== "string" && type !== "number" && type !== "symbol";
 };
 
 function isStatePrimitive(state: unknown): state is StatePrimitive {

@@ -112,8 +112,33 @@ describe("store middleware", () => {
 		});
 
 		const countStore = store(0, { middleware: [middleware] });
-		countStore.destroy?.();
+		countStore.destroy();
 
 		expect(cleanupSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it("runs root middleware for root updates and both for slice updates", () => {
+		const calls: string[] = [];
+		const base: StoreMiddleware<{ count: number }> = () => ({
+			set: (next) => (setter) => {
+				calls.push("base");
+				next(setter);
+			},
+		});
+		const slice: StoreMiddleware<number> = () => ({
+			set: (next) => (setter) => {
+				calls.push("slice");
+				next(setter);
+			},
+		});
+
+		const rootStore = store({ count: 0 }, { middleware: [base] });
+		const countStore = rootStore.select("count", { middleware: [slice] });
+
+		rootStore.set({ count: 1 });
+		expect(calls).toEqual(["base"]);
+
+		countStore.set(2);
+		expect(calls).toEqual(["base", "slice", "base"]);
 	});
 });
