@@ -54,9 +54,14 @@ type SelectPathValue<T, P extends readonly PropertyKey[]> = T extends
 
 export type SelectFn<T extends StateObject | StatePrimitive> =
 	NonNullableState<T> extends StateObject
-		? <P extends SelectPath<NonNullableState<T>>>(
-				...path: P
-			) => Store<SelectPathValue<T, P>>
+		? {
+				<P extends SelectPath<NonNullableState<T>>>(
+					...path: P
+				): Store<SelectPathValue<T, P>>;
+				<P extends SelectPath<NonNullableState<T>>>(
+					...pathAndOptions: [...P, StoreOptions<SelectPathValue<T, P>>]
+				): Store<SelectPathValue<T, P>>;
+			}
 		: undefined;
 
 export type Store<T extends StateObject | StatePrimitive> = {
@@ -117,7 +122,40 @@ export type Store<T extends StateObject | StatePrimitive> = {
 	 * console.log(documentStore.get()); // { title: "New Title" }
 	 */
 	select: SelectFn<T>;
+	/**
+	 * Optional cleanup for middleware init hooks.
+	 */
+	destroy: () => void;
 };
+
+export type StoreMiddleware<T extends StateObject | StatePrimitive> = (
+	store: Store<T>,
+) => {
+	set?: (next: Store<T>["set"]) => Store<T>["set"];
+	init?: (() => void) | (() => () => void);
+};
+
+export type StoreOptions<T extends StateObject | StatePrimitive> = {
+	middleware?: StoreMiddleware<T>[];
+};
+
+/**
+ * Logs store updates to the console.
+ * Use this in the `middleware` array when creating a store.
+ *
+ * @example
+ * const countStore = store(0, { middleware: [loggerMiddleware] });
+ */
+export const loggerMiddleware = <T extends StateObject | StatePrimitive>(
+	store: Store<T>,
+): ReturnType<StoreMiddleware<T>> => ({
+	set: (next) => (setter) => {
+		const prev = store.get();
+		next(setter);
+		const nextValue = store.get();
+		console.log("[@simplestack/store]", prev, nextValue);
+	},
+});
 
 /**
  * Creates a store with properties for getting, setting, subscribing to, and selecting from the state.
@@ -144,29 +182,44 @@ export type Store<T extends StateObject | StatePrimitive> = {
  *   authors: [],
  * });
  */
-export function store(initial: number): Store<number>;
-export function store(initial: string): Store<string>;
-export function store(initial: boolean): Store<boolean>;
+export function store(
+	initial: number,
+	options?: StoreOptions<number>,
+): Store<number>;
+export function store(
+	initial: string,
+	options?: StoreOptions<string>,
+): Store<string>;
+export function store(
+	initial: boolean,
+	options?: StoreOptions<boolean>,
+): Store<boolean>;
 export function store<T extends StateObject | StatePrimitive>(
 	initial: T,
+	options?: StoreOptions<T>,
 ): Store<T>;
 export function store<T extends StateObject | StatePrimitive>(
 	initial: T,
+	options?: StoreOptions<T>,
 ): Store<T> {
 	const state = new Signal.State<T>(initial);
 	const getInitial = () => initial;
 	const get = () => state.get();
 	const set = (setter: Setter<T>) =>
 		state.set(typeof setter === "function" ? setter(state.get()) : setter);
-	return createStoreApi(getInitial, get, set);
+	return createStoreApi(getInitial, get, set, {
+		middleware: options?.middleware,
+	});
 }
 
 const createStoreApi = <S extends StateObject | StatePrimitive>(
 	getInitial: () => S,
 	get: () => S,
-	set: (setter: Setter<S>) => void,
-	options?: { selectable?: boolean },
+	baseSet: (setter: Setter<S>) => void,
+	options?: { selectable?: boolean; middleware?: StoreMiddleware<S>[] },
 ): Store<S> => {
+	let set = baseSet;
+
 	const subscribe = (callback: (state: S) => void) => {
 		// Track the previous value to avoid unnecessary updates when effects are triggered.
 		// Each subscriber tracks its own previous value to avoid duplicate callbacks
@@ -203,20 +256,34 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		return current as any;
 	};
 
-	const canSelect = options?.selectable ?? !isStatePrimitive(get());
-	if (!canSelect) {
-		return {
-			get,
-			getInitial,
-			set,
-			subscribe,
-			select: undefined as SelectFn<S>,
-		};
-	}
+	const storeApi: Store<S> = {
+		get,
+		getInitial,
+		set: (setter: Setter<S>) => set(setter),
+		subscribe,
+		select: undefined as SelectFn<S>,
+		destroy: () => {},
+	};
 
 	function select<P extends SelectPath<NonNullableState<S>>>(
 		...path: P
+	): Store<SelectPathValue<S, P>>;
+	function select<P extends SelectPath<NonNullableState<S>>>(
+		...pathAndOptions: [...P, StoreOptions<SelectPathValue<S, P>>]
+	): Store<SelectPathValue<S, P>>;
+	function select<P extends SelectPath<NonNullableState<S>>>(
+		...pathAndOptions: P | [...P, StoreOptions<SelectPathValue<S, P>>]
 	): Store<SelectPathValue<S, P>> {
+		// Since select accepts variadic arguments, we need to check
+		// if the last argument matches the StoreOptions signature.
+		const maybeOptions = pathAndOptions[pathAndOptions.length - 1];
+		const hasOptions = isSelectOptions(maybeOptions);
+		const path = (
+			hasOptions ? pathAndOptions.slice(0, -1) : pathAndOptions
+		) as P;
+		const selectOptions = hasOptions
+			? (maybeOptions as StoreOptions<SelectPathValue<S, P>>)
+			: undefined;
 		const getInitialSelected = () => getAtPath(getInitial(), path);
 		const getSelected = () => getAtPath(get(), path);
 		const setSelected = (setter: Setter<SelectPathValue<S, P>>) => {
@@ -276,16 +343,50 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		};
 		return createStoreApi(getInitialSelected, getSelected, setSelected, {
 			selectable: true,
+			middleware: selectOptions?.middleware,
 		});
 	}
 
-	return {
-		get,
-		getInitial,
-		set,
-		subscribe,
-		select: select as SelectFn<S>,
-	};
+	const canSelect = options?.selectable ?? !isStatePrimitive(get());
+	if (canSelect) {
+		storeApi.select = select as SelectFn<S>;
+	}
+
+	if (options?.middleware?.length) {
+		const entries = options.middleware.map((middleware) =>
+			middleware(storeApi),
+		);
+		const setWrappers = entries
+			.map((entry) => entry.set)
+			.filter(
+				(entry): entry is (next: Store<S>["set"]) => Store<S>["set"] =>
+					typeof entry === "function",
+			);
+
+		if (setWrappers.length) {
+			set = setWrappers.reduceRight((next, wrapper) => wrapper(next), set);
+		}
+
+		const cleanups = entries
+			.map((entry) => entry.init?.())
+			.filter(
+				(cleanup): cleanup is () => void => typeof cleanup === "function",
+			);
+
+		if (cleanups.length) {
+			storeApi.destroy = () => {
+				for (const cleanup of cleanups) cleanup();
+				cleanups.length = 0;
+			};
+		}
+	}
+
+	return storeApi;
+};
+
+const isSelectOptions = (value: unknown): value is StoreOptions<any> => {
+	const type = typeof value;
+	return type !== "string" && type !== "number" && type !== "symbol";
 };
 
 function isStatePrimitive(state: unknown): state is StatePrimitive {

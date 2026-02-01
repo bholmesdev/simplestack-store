@@ -1,9 +1,9 @@
 "use client";
 
-import { store } from "@simplestack/store";
+import { loggerMiddleware, store } from "@simplestack/store";
 import { useStoreValue } from "@simplestack/store/react";
 
-const countStore = store(0);
+const countStore = store(0, { middleware: [loggerMiddleware] });
 
 function Counter() {
   const count = useStoreValue(countStore);
