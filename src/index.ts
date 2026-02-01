@@ -140,6 +140,24 @@ export type StoreOptions<T extends StateObject | StatePrimitive> = {
 };
 
 /**
+ * Logs store updates to the console.
+ * Use this in the `middleware` array when creating a store.
+ *
+ * @example
+ * const countStore = store(0, { middleware: [loggerMiddleware] });
+ */
+export const loggerMiddleware = <T extends StateObject | StatePrimitive>(
+	store: Store<T>,
+): ReturnType<StoreMiddleware<T>> => ({
+	set: (next) => (setter) => {
+		const prev = store.get();
+		next(setter);
+		const nextValue = store.get();
+		console.log("set", prev, nextValue);
+	},
+});
+
+/**
  * Creates a store with properties for getting, setting, subscribing to, and selecting from the state.
  *
  * @param initial - The initial state of the store.
@@ -254,12 +272,10 @@ const createStoreApi = <S extends StateObject | StatePrimitive>(
 		...pathAndOptions: [...P, StoreOptions<SelectPathValue<S, P>>]
 	): Store<SelectPathValue<S, P>>;
 	function select<P extends SelectPath<NonNullableState<S>>>(
-		...pathAndOptions:
-			| P
-			| [...P, StoreOptions<SelectPathValue<S, P>>]
+		...pathAndOptions: P | [...P, StoreOptions<SelectPathValue<S, P>>]
 	): Store<SelectPathValue<S, P>> {
-      // Since select accepts variadic arguments, we need to check
-      // if the last argument matches the StoreOptions signature. 
+		// Since select accepts variadic arguments, we need to check
+		// if the last argument matches the StoreOptions signature.
 		const maybeOptions = pathAndOptions[pathAndOptions.length - 1];
 		const hasOptions = isSelectOptions(maybeOptions);
 		const path = (
