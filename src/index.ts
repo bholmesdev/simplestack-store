@@ -132,7 +132,7 @@ export type StoreMiddleware<T extends StateObject | StatePrimitive> = (
 	store: Store<T>,
 ) => {
 	set?: (next: Store<T>["set"]) => Store<T>["set"];
-	init?: () => void | (() => void);
+	init?: (() => void) | (() => () => void);
 };
 
 export type StoreOptions<T extends StateObject | StatePrimitive> = {
