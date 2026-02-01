@@ -153,7 +153,7 @@ export const loggerMiddleware = <T extends StateObject | StatePrimitive>(
 		const prev = store.get();
 		next(setter);
 		const nextValue = store.get();
-		console.log("set", prev, nextValue);
+		console.log("[@simplestack/store]", prev, nextValue);
 	},
 });
 
