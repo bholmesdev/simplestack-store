@@ -215,6 +215,32 @@ describe("store", () => {
 			expect(callback).toHaveBeenNthCalledWith(2, 2);
 			expect(callback).toHaveBeenNthCalledWith(3, 3);
 		});
+
+		it("should propagate every update when setting another store inside subscribe", async () => {
+			const storeA = store(0);
+			const storeB = store(0);
+			const callback = vi.fn();
+
+			storeB.subscribe((state) => {
+				storeA.set(state);
+			});
+			storeA.subscribe(callback);
+
+			expect(callback).toHaveBeenCalledWith(0);
+			callback.mockClear();
+
+			storeB.set(1);
+			await nextTick();
+			storeB.set(2);
+			await nextTick();
+			storeB.set(3);
+			await nextTick();
+
+			expect(callback).toHaveBeenCalledTimes(3);
+			expect(callback).toHaveBeenNthCalledWith(1, 1);
+			expect(callback).toHaveBeenNthCalledWith(2, 2);
+			expect(callback).toHaveBeenNthCalledWith(3, 3);
+		});
 	});
 
 	describe("getInitial", () => {

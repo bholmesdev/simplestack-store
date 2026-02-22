@@ -410,9 +410,14 @@ const w = new Signal.subtle.Watcher(() => {
 
 function processPending() {
 	needsEnqueue = true;
-
-	for (const s of w.getPending()) {
-		s.get();
+	let pending = w.getPending();
+	// Drain until empty because s.get() can enqueue additional pending computations.
+	// Ex: setting the value of store A from a subscription to store B.
+	while (pending.length) {
+		for (const s of pending) {
+			s.get();
+		}
+		pending = w.getPending();
 	}
 
 	w.watch();
