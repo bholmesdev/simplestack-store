@@ -22,6 +22,9 @@ export default function Home() {
       <h1>@simplestack/store</h1>
       <p>Next.js Example</p>
       <Counter />
+      <a href="https://simple-stack.dev/store">
+        Read the @simplestack/store documentation
+      </a>
     </div>
   );
 }

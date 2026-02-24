@@ -41,6 +41,8 @@ button {
   font-size: 1rem;
   font-weight: bold;
   padding: 0.5rem 1rem;
+  min-height: 48px;
+  min-width: 48px;
   border: none;
   border-radius: 0.5rem;
   background: #333;
@@ -50,4 +52,14 @@ button {
 
 button:hover {
   background: #444;
+}
+
+a {
+  color: #6bf;
+  text-decoration: none;
+  padding: 0.25rem 0;
+}
+
+a:hover {
+  text-decoration: underline;
 }
