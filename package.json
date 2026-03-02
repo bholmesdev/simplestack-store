@@ -1,7 +1,7 @@
 {
 	"name": "@simplestack/store",
 	"version": "0.7.6",
-	"description": "A simple storage solution for React",
+	"description": "A simple, select-based state management library for React — fine-grained reactivity with signals and selectors",
 	"type": "module",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -28,7 +28,14 @@
 	},
 	"keywords": [
 		"store",
-		"react"
+		"react",
+		"state-management",
+		"zustand-alternative",
+		"redux-alternative",
+		"signals",
+		"selectors",
+		"react-store",
+		"typescript"
 	],
 	"author": "bholmesdev",
 	"license": "MIT",

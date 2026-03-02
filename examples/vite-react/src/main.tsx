@@ -20,11 +20,11 @@ function Counter() {
 
 function App() {
   return (
-    <div className="app">
+    <main className="app">
       <h1>@simplestack/store</h1>
       <p>Vite + React Example</p>
       <Counter />
-    </div>
+    </main>
   );
 }
 

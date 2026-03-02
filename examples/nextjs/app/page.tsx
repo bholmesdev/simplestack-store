@@ -18,10 +18,10 @@ function Counter() {
 
 export default function Home() {
   return (
-    <div className="app">
+    <main className="app">
       <h1>@simplestack/store</h1>
       <p>Next.js Example</p>
       <Counter />
-    </div>
+    </main>
   );
 }
