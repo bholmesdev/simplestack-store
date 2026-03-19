@@ -39,18 +39,19 @@ type SelectPath<T> = T extends StateObject
 		}[keyof Required<T>]
 	: never;
 
-type SelectPathValue<T, P extends readonly PropertyKey[]> = T extends
-	| null
-	| undefined
-	? undefined
-	: P extends [infer K, ...infer Rest]
-		? K extends keyof T
+type SelectPathValue<T, P extends readonly PropertyKey[]> = P extends [
+	infer K,
+	...infer Rest,
+]
+	? T extends null | undefined
+		? undefined
+		: K extends keyof T
 			? SelectPathValue<
 					SelectValue<T, K>,
 					Rest extends readonly PropertyKey[] ? Rest : []
 				>
 			: undefined
-		: T;
+	: T;
 
 export type SelectFn<T extends StateObject | StatePrimitive> =
 	NonNullableState<T> extends StateObject

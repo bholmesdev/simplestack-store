@@ -688,6 +688,29 @@ describe("store", () => {
 			expect(documentStore.get().notes[0].title).toBe("Updated");
 		});
 
+		it("should preserve null at the selected leaf type", () => {
+			const documentStore = store<{
+				note: { title: string | null };
+			}>({
+				note: { title: null },
+			});
+			const titleStore = documentStore.select("note", "title");
+
+			titleStore.set(null);
+			expect(documentStore.get().note.title).toBeNull();
+		});
+
+		it("should still map null in the middle of a path to undefined", () => {
+			const documentStore = store<{
+				note: { title: string } | null;
+			}>({
+				note: null,
+			});
+			const titleStore = documentStore.select("note", "title");
+
+			expect(titleStore.get()).toBeUndefined();
+		});
+
 		it("should allow setting when array indices in the middle exist at runtime", () => {
 			const matrixStore = store({
 				groups: [[{ title: "A" }]],
