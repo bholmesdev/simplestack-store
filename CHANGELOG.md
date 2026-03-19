@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.7.7]
+
+### Fixed
+
+- Preserve `null` in `select()` leaf types instead of narrowing it to `undefined`.
+
 ## [0.7.3]
 
 ### Added
